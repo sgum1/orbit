@@ -1,12 +1,20 @@
-/* Orbit service worker: makes the app open instantly and work offline.
+/* Orbit service worker: lets the app open offline.
    It only caches the app's own files. Your data lives in the app's local storage, never here or on a server.
-   Strategy: serve the cached copy right away, then refresh the cache in the background,
-   so updates to the app appear the next time you open it. Bump VERSION to force a refresh. */
-const VERSION = 'orbit-v7';
+
+   Strategy
+   - The app page and its manifest: network first. When online you always get the latest version
+     (revalidated with GitHub so its 10-minute HTTP cache can't serve a stale copy). If the network
+     fails or takes longer than a few seconds, the saved copy is used, so it still works offline.
+   - Icons: cache first. They rarely change.
+   Bump VERSION when releasing so old caches are cleared. */
+const VERSION = 'orbit-v8';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './icons/apple-touch-icon.png', './icons/icon-192.png', './icons/icon-512.png'];
+const NETWORK_TIMEOUT_MS = 4000;
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(VERSION).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(VERSION)
+    .then(c => c.addAll(ASSETS.map(u => new Request(u, { cache: 'reload' }))))
+    .then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', e => {
@@ -15,17 +23,37 @@ self.addEventListener('activate', e => {
     .then(() => self.clients.claim()));
 });
 
+function networkFirst(req, key) {
+  return caches.open(VERSION).then(cache => new Promise(resolve => {
+    let settled = false;
+    const useCache = async () => {
+      if (settled) return;
+      const cached = await cache.match(key, { ignoreSearch: true });
+      if (cached && !settled) { settled = true; resolve(cached); }
+    };
+    const timer = setTimeout(useCache, NETWORK_TIMEOUT_MS);
+    fetch(req, { cache: 'no-cache' }).then(res => {
+      clearTimeout(timer);
+      if (res.ok) cache.put(key, res.clone());
+      if (!settled) { settled = true; resolve(res); }
+    }).catch(async () => {
+      clearTimeout(timer);
+      await useCache();
+      if (!settled) { settled = true; resolve(Response.error()); }
+    });
+  }));
+}
+
 self.addEventListener('fetch', e => {
   const req = e.request;
-  if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
-  e.respondWith(caches.open(VERSION).then(async cache => {
-    const key = req.mode === 'navigate' ? './index.html' : req;
-    const cached = await cache.match(key, { ignoreSearch: true });
-    const fresh = fetch(req).then(res => {
-      if (res.ok) cache.put(key, res.clone());
-      return res;
-    }).catch(() => cached);
-    e.waitUntil(fresh.catch(() => {}));
-    return cached || fresh;
-  }));
+  const url = new URL(req.url);
+  if (req.method !== 'GET' || url.origin !== self.location.origin) return;
+  if (req.mode === 'navigate' || url.pathname.endsWith('/') || url.pathname.endsWith('.html') || url.pathname.endsWith('.webmanifest')) {
+    e.respondWith(networkFirst(req, req.mode === 'navigate' ? './index.html' : req));
+    return;
+  }
+  e.respondWith(caches.match(req, { ignoreSearch: true }).then(hit => hit || fetch(req).then(res => {
+    if (res.ok) { const copy = res.clone(); caches.open(VERSION).then(c => c.put(req, copy)); }
+    return res;
+  })));
 });

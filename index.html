@@ -506,6 +506,7 @@ body:not([data-view=week]):not([data-view=calendar]):not([data-view=people]) .fa
    Internally, in-person interactions use the type key 'hangout'. */
 
 const KEY = 'orbit.v1';
+const APP_VERSION = '8';   // keep in step with VERSION in sw.js
 
 // Default cadences in days. Based on Dunbar's layers and friendship decay research,
 // tuned for early/mid-20s. Editable in Settings and per person.
@@ -1299,7 +1300,7 @@ function renderSettings() {
     <div class="field" style="margin-top:0"><label>Check-ins per week</label><input type="number" min="1" value="${c.text}" onchange="App.setCap('text',this.value)"></div>
   </div>
 
-  <div class="section"><div class="eyebrow">About</div></div>
+  <div class="section"><div class="eyebrow">About</div><div class="section-note">Version ${APP_VERSION}</div></div>
   <div class="rows"><div class="row simple" ${RB} onclick="App.go('science')"><span class="dot s-plan"></span>
     <div class="row-main"><div class="name">Research</div><div class="meta"><span>How Orbit decides who to suggest and how often</span></div></div></div></div>
 
@@ -2052,7 +2053,21 @@ let renderedDay = today();
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { renderedDay = today(); render(); } });
 setInterval(() => { if (today() !== renderedDay) { renderedDay = today(); render(); } }, 60000);
 try { navigator.storage?.persist?.(); } catch {}
-if (isHosted() && 'serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+// Offline support. Checks for a newer version on launch and whenever the app comes back to the foreground,
+// and reloads once when one is installed, so you're never stuck on an old copy.
+if (isHosted() && 'serviceWorker' in navigator) {
+  const hadController = !!navigator.serviceWorker.controller;
+  let reloaded = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController || reloaded || $('#modal-root').innerHTML) return;   // don't interrupt an open form
+    reloaded = true; location.reload();
+  });
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(reg => {
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) reg.update().catch(() => {}); });
+    }).catch(() => {});
+  });
+}
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installPrompt = e; render(); });
 window.addEventListener('appinstalled', () => { installPrompt = null; render(); });
 
