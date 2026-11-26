@@ -2,7 +2,7 @@
    It only caches the app's own files. Your data lives in the app's local storage, never here or on a server.
    Strategy: serve the cached copy right away, then refresh the cache in the background,
    so updates to the app appear the next time you open it. Bump VERSION to force a refresh. */
-const VERSION = 'orbit-v6';
+const VERSION = 'orbit-v7';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './icons/apple-touch-icon.png', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', e => {

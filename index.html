@@ -309,6 +309,15 @@ details[open] summary:before{content:"– "}
   .entry{grid-template-columns:1fr}
 }
 
+/* header backup buttons */
+.hdr-actions{display:flex;gap:6px;margin-left:20px;padding-left:20px;border-left:1px solid var(--line);flex:none}
+.hbtn{position:relative;display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 11px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:13px;font-weight:500;color:var(--ink-2);cursor:pointer;white-space:nowrap;transition:border-color .15s,color .15s}
+.hbtn:hover{border-color:var(--faint);color:var(--ink)}
+.hbtn svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.hbtn .due{position:absolute;top:-4px;right:-4px;width:9px;height:9px;border-radius:50%;background:var(--due);border:2px solid var(--bg)}
+main.wrap{padding-top:56px;padding-bottom:120px}
+@media (max-width:900px) and (min-width:641px){ .hbtn .lbl{display:none} .hbtn{padding:0 9px} .hdr-actions{margin-left:14px;padding-left:14px} nav{gap:16px} }
+
 /* phone tab bar */
 .tabbar{display:none;position:fixed;left:0;right:0;bottom:0;z-index:10;background:color-mix(in srgb,var(--bg) 97%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
 .tabbar button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:0;color:var(--faint);font-size:10.5px;font-weight:500;letter-spacing:.01em;padding:5px 0 2px;cursor:pointer;position:relative}
@@ -379,7 +388,9 @@ body:not([data-view=week]):not([data-view=calendar]):not([data-view=people]) .fa
   body{font-size:15.5px}
   .top{height:50px}
   .logo{font-size:20px}
-  main{padding-top:22px}
+  .hdr-actions{margin-left:auto;padding-left:0;border-left:0}
+  .hbtn{height:34px;padding:0 11px;font-size:13.5px}
+  main.wrap{padding-top:36px;padding-bottom:calc(130px + env(safe-area-inset-bottom))}
   h1{font-size:31px;margin:4px 0 6px}
   .lede{font-size:15px}
   .tabbar{display:flex}
@@ -480,6 +491,7 @@ body:not([data-view=week]):not([data-view=calendar]):not([data-view=people]) .fa
 <header><div class="wrap top">
   <button class="logo" onclick="App.go('week')"><span class="mark"></span>Orbit</button>
   <nav id="nav"></nav>
+  <div class="hdr-actions" id="hdr-actions"></div>
 </div></header>
 <main class="wrap" id="main"></main>
 <nav class="tabbar" id="tabbar" aria-label="Sections"></nav>
@@ -847,6 +859,13 @@ function renderNav() {
   const tabs = [['week', 'This week'], ['calendar', 'Calendar'], ['people', 'People'], ['insights', 'Insights'], ['science', 'Research'], ['settings', 'Settings']];
   $('#nav').innerHTML = tabs.map(([k, l]) =>
     `<button class="${view === k ? 'on' : ''}" onclick="App.go('${k}')">${l}${k === 'week' && left ? `<span class="n" title="Still to do this week">${left}</span>` : ''}</button>`).join('');
+  const due = needsBackup();
+  $('#hdr-actions').innerHTML = `
+    <button class="hbtn" onclick="App.exportData()" title="${due ? 'Time for a backup: save a copy of your data' : 'Save a copy of your data'}" aria-label="Export backup">
+      <svg viewBox="0 0 16 16"><path d="M8 10V2M5 5l3-3 3 3M3 9v4.5h10V9"/></svg><span class="lbl">Export</span>${due ? '<i class="due"></i>' : ''}</button>
+    <label class="hbtn" title="Restore from a backup file" aria-label="Import backup">
+      <svg viewBox="0 0 16 16"><path d="M8 2v8M5 7l3 3 3-3M3 9v4.5h10V9"/></svg><span class="lbl">Import</span>
+      <input type="file" accept="application/json,.json" style="display:none" onchange="App.importData(this.files[0]);this.value=''"></label>`;
   const short = [['week', 'Week'], ['calendar', 'Calendar'], ['people', 'People'], ['insights', 'Insights'], ['settings', 'Settings']];
   $('#tabbar').innerHTML = short.map(([k, l]) =>
     `<button class="${view === k || (k === 'settings' && view === 'science') ? 'on' : ''}" onclick="App.go('${k}')" aria-label="${l}"><svg viewBox="0 0 24 24">${TAB_ICONS[k]}</svg>${l}${k === 'week' && left ? `<span class="n">${left}</span>` : ''}</button>`).join('');
@@ -904,9 +923,6 @@ function renderWeek() {
       <button class="btn btn-sm btn-quiet" onclick="App.cancelEvent('${e.id}')">It didn't</button></div>`);
   const ins = installBanner();
   if (ins) rows.unshift(ins);
-  if (needsBackup()) rows.push(`<div class="banner-row"><div class="grow"><b>Back up your data.</b> <span class="muted">Everything lives only in this browser. A backup file keeps it safe.</span></div>
-      <button class="btn btn-sm btn-primary" onclick="App.exportData()">Export backup</button>
-      <button class="btn btn-sm btn-quiet" onclick="App.snoozeBackup()">Later</button></div>`);
   if (rows.length) h += `<div class="banner">${rows.join('')}</div>`;
 
   // don't forget: birthdays and dated follow-ups
