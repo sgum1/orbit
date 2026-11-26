@@ -314,7 +314,6 @@ details[open] summary:before{content:"– "}
 .hbtn{position:relative;display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 11px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:13px;font-weight:500;color:var(--ink-2);cursor:pointer;white-space:nowrap;transition:border-color .15s,color .15s}
 .hbtn:hover{border-color:var(--faint);color:var(--ink)}
 .hbtn svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
-.hbtn .due{position:absolute;top:-4px;right:-4px;width:9px;height:9px;border-radius:50%;background:var(--due);border:2px solid var(--bg)}
 main.wrap{padding-top:56px;padding-bottom:120px}
 @media (max-width:900px) and (min-width:641px){ .hbtn .lbl{display:none} .hbtn{padding:0 9px} .hdr-actions{margin-left:14px;padding-left:14px} nav{gap:16px} }
 
@@ -332,8 +331,41 @@ main.wrap{padding-top:56px;padding-bottom:120px}
 .bar2{height:3px;background:var(--line);border-radius:3px;overflow:hidden;display:flex;flex:1;max-width:280px}
 .bar2 .d{background:var(--ink)} .bar2 .p{background:var(--faint)}
 .row.task{grid-template-columns:18px 1fr auto}
-.tick{width:18px;height:18px;border-radius:50%;border:1.5px solid var(--faint);background:none;cursor:pointer;flex:none;padding:0;transition:all .12s}
-.tick:hover{border-color:var(--good);background:var(--good)}
+.tick{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--faint);background:none;cursor:pointer;flex:none;padding:0;display:inline-flex;align-items:center;justify-content:center;transition:all .12s;color:#fff}
+.tick:hover{border-color:var(--good);background:color-mix(in srgb,var(--good) 18%,transparent)}
+.tick.done{background:var(--good);border-color:var(--good)}
+.tick.plan{border-style:dashed}
+.tick svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+
+/* weekly to-do rows */
+.todos{border-top:1px solid var(--line)}
+.section + .todos{border-top:0}
+.todo{display:grid;grid-template-columns:22px 1fr auto;gap:14px;align-items:start;padding:14px 6px;border-bottom:1px solid var(--line);cursor:pointer;transition:background .12s}
+.todo:hover{background:var(--hover)}
+.todo .tick{margin-top:1px}
+.todo-name{font-size:15.5px;font-weight:600;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.todo-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.todo-note{font-size:13px;color:var(--ink-2);margin-top:5px}
+.todo-right{padding-top:2px;text-align:right}
+.todo.is-done .todo-name{color:var(--muted);font-weight:500}
+.todo.is-done .tag{opacity:.6}
+.group-hint{display:flex;align-items:center;gap:12px;justify-content:space-between;padding:10px 6px 12px;font-size:13.5px;color:var(--muted);border-bottom:1px solid var(--line)}
+.group-hint b{color:var(--ink);font-weight:600}
+
+/* one-tap choices */
+.pills{display:flex;flex-wrap:wrap;gap:6px}
+.pill-opt{position:relative;cursor:pointer}
+.pill-opt input{position:absolute;opacity:0;pointer-events:none}
+.pill-opt span{display:inline-flex;align-items:center;height:34px;padding:0 14px;border:1px solid var(--line);border-radius:999px;font-size:13.5px;background:var(--surface);transition:all .12s}
+.pill-opt:hover span{border-color:var(--faint)}
+.pill-opt input:checked + span{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.pill-opt.acq input:checked + span{background:var(--acq);border-color:var(--acq);color:#fff}
+.hour-chips{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:20px}
+.hchip{height:56px;border:1px solid var(--line);border-radius:12px;background:var(--surface);font-size:17px;font-weight:500;cursor:pointer;font-family:var(--serif)}
+.hchip:hover{border-color:var(--ink)}
+.hchip:active{background:var(--ink);color:var(--bg)}
+.more summary{margin-top:22px;font-size:13px}
+.more[open] summary{margin-bottom:-4px}
 .ring{width:18px;height:18px;border-radius:50%;border:1.5px dashed var(--due)}
 .ev.bday{background:transparent;border:1px dashed var(--due)}
 .ev.bday b{font-weight:500}
@@ -373,12 +405,14 @@ main.wrap{padding-top:56px;padding-bottom:120px}
 @media (max-width:640px){ .inline-add{grid-template-columns:1fr} }
 
 /* floating add button + action sheet */
-.fab{display:none;position:fixed;right:18px;bottom:calc(78px + env(safe-area-inset-bottom));z-index:11;width:54px;height:54px;border-radius:50%;border:0;background:var(--ink);color:var(--bg);box-shadow:0 6px 20px rgba(0,0,0,.18);cursor:pointer;align-items:center;justify-content:center}
+.fab{display:flex;position:fixed;right:max(28px, calc((100vw - 960px) / 2 - 40px));bottom:32px;z-index:11;width:54px;height:54px;border-radius:50%;border:0;background:var(--ink);color:var(--bg);box-shadow:0 6px 20px rgba(0,0,0,.18);cursor:pointer;align-items:center;justify-content:center}
 .fab svg{width:22px;height:22px;stroke:currentColor;stroke-width:2;stroke-linecap:round;fill:none}
 .fab:active{transform:scale(.96)}
 body:not([data-view=week]):not([data-view=calendar]):not([data-view=people]) .fab{display:none!important}
 .sheet-list{margin-top:10px;border-top:1px solid var(--line)}
 .sheet-list button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;background:none;border:0;border-bottom:1px solid var(--line);padding:15px 2px;text-align:left;cursor:pointer;font-size:16px}
+.sheet-list button b{font-weight:500}
+.sheet-list button:hover{background:var(--hover)}
 .sheet-list button span{font-size:13.5px;color:var(--muted)}
 .sheet-list button:active{background:var(--hover)}
 .section + .rows{border-top:0}
@@ -394,8 +428,7 @@ body:not([data-view=week]):not([data-view=calendar]):not([data-view=people]) .fa
   h1{font-size:31px;margin:4px 0 6px}
   .lede{font-size:15px}
   .tabbar{display:flex}
-  .fab{display:flex}
-  .page-actions{display:none!important}
+  .fab{right:18px;bottom:calc(78px + env(safe-area-inset-bottom))}
   .section{margin:38px 0 12px;flex-wrap:wrap;row-gap:2px}
   .section-note{flex-basis:100%;text-align:left;font-size:12.5px}
   .section .linkish{font-size:13.5px}
@@ -479,6 +512,12 @@ body:not([data-view=week]):not([data-view=calendar]):not([data-view=people]) .fa
   .panel-top{flex-wrap:wrap;row-gap:4px}
   .panel-top .label{flex-basis:100%}
   .three{grid-template-columns:1.25fr 1fr .7fr;gap:8px}
+  .todo{grid-template-columns:26px 1fr auto;padding:15px 2px;gap:12px}
+  .todo .tick{width:26px;height:26px}
+  .todo-name{font-size:16px}
+  .todo-sub,.todo-note{font-size:13.5px}
+  .pill-opt span{height:38px;padding:0 15px;font-size:14.5px}
+  .hchip{height:60px}
   .three input{padding:8px 9px}
   .combo-box{min-height:44px;padding:5px 7px}
   .combo-box input{height:32px;font-size:16px}
@@ -506,7 +545,7 @@ body:not([data-view=week]):not([data-view=calendar]):not([data-view=people]) .fa
    Internally, in-person interactions use the type key 'hangout'. */
 
 const KEY = 'orbit.v1';
-const APP_VERSION = '8';   // keep in step with VERSION in sw.js
+const APP_VERSION = '9';   // keep in step with VERSION in sw.js
 
 // Default cadences in days. Based on Dunbar's layers and friendship decay research,
 // tuned for early/mid-20s. Editable in Settings and per person.
@@ -857,13 +896,12 @@ function remainingThisWeek() {
 }
 function renderNav() {
   const left = activePeople().length ? remainingThisWeek() : 0;
-  const tabs = [['week', 'This week'], ['calendar', 'Calendar'], ['people', 'People'], ['insights', 'Insights'], ['science', 'Research'], ['settings', 'Settings']];
+  const tabs = [['week', 'This week'], ['calendar', 'Calendar'], ['people', 'People'], ['insights', 'Insights'], ['settings', 'Settings']];
   $('#nav').innerHTML = tabs.map(([k, l]) =>
-    `<button class="${view === k ? 'on' : ''}" onclick="App.go('${k}')">${l}${k === 'week' && left ? `<span class="n" title="Still to do this week">${left}</span>` : ''}</button>`).join('');
-  const due = needsBackup();
+    `<button class="${view === k || (k === 'settings' && view === 'science') ? 'on' : ''}" onclick="App.go('${k}')">${l}${k === 'week' && left ? `<span class="n" title="Still to do this week">${left}</span>` : ''}</button>`).join('');
   $('#hdr-actions').innerHTML = `
-    <button class="hbtn" onclick="App.exportData()" title="${due ? 'Time for a backup: save a copy of your data' : 'Save a copy of your data'}" aria-label="Export backup">
-      <svg viewBox="0 0 16 16"><path d="M8 10V2M5 5l3-3 3 3M3 9v4.5h10V9"/></svg><span class="lbl">Export</span>${due ? '<i class="due"></i>' : ''}</button>
+    <button class="hbtn" onclick="App.exportData()" title="Save a copy of your data" aria-label="Export backup">
+      <svg viewBox="0 0 16 16"><path d="M8 10V2M5 5l3-3 3 3M3 9v4.5h10V9"/></svg><span class="lbl">Export</span></button>
     <label class="hbtn" title="Restore from a backup file" aria-label="Import backup">
       <svg viewBox="0 0 16 16"><path d="M8 2v8M5 7l3 3 3-3M3 9v4.5h10V9"/></svg><span class="lbl">Import</span>
       <input type="file" accept="application/json,.json" style="display:none" onchange="App.importData(this.files[0]);this.value=''"></label>`;
@@ -891,6 +929,19 @@ function emptyState() {
 }
 
 /* this week */
+const CHECK_SVG = '<svg viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7"/></svg>';
+// one short line worth knowing: an undated follow-up (dated ones and birthdays already sit under Don't forget)
+function todoNote(p) {
+  const f = openFollowUps(p).find(f => !f.date);
+  return f ? `Follow up: ${esc(f.text)}` : '';
+}
+const shortDay = d => { const n = diffDays(d, today()); return n === 0 ? 'today' : n === 1 ? 'yesterday' : wd(d); };
+function todoRow({ p, kind, done, tickClass, tickAction, tickLabel, sub, right, note }) {
+  return `<div class="todo ${done ? 'is-done' : ''}" ${RB} onclick="App.rowSheet('${p.id}','${kind}')">
+    <button class="tick ${tickClass || ''}" aria-label="${esc(tickLabel)}" title="${esc(tickLabel)}" onclick="event.stopPropagation();${tickAction}">${done ? CHECK_SVG : ''}</button>
+    <div class="todo-main"><div class="todo-name">${esc(p.name)}${tag(p)}</div><div class="todo-sub">${esc(sub)}</div>${note ? `<div class="todo-note">${note}</div>` : ''}</div>
+    <div class="todo-right">${right}</div></div>`;
+}
 function renderWeek() {
   if (!activePeople().length) return emptyState();
   const t = today(), ws = weekStart(t);
@@ -902,26 +953,17 @@ function renderWeek() {
   const toGo = total - done - planned;
   const daysLeft = diffDays(t, plan.we) + 1;
 
-  let h = `<div class="eyebrow">Week of ${rangeLabel(ws)} · ${plural(daysLeft, 'day')} left</div>
+  let h = `<div class="eyebrow">${rangeLabel(ws)} · ${plural(daysLeft, 'day')} left</div>
     <h1>This week.</h1>
-    <p class="lede">${total ? `See ${people(plan.see.length)} in person and check in with ${people(plan.text.length)}.` : 'Nothing is due this week.'}</p>
-    ${total ? `<div class="week-progress"><div class="bar2"><span class="d" style="width:${done / total * 100}%"></span><span class="p" style="width:${planned / total * 100}%"></span></div><span>${[`${done} done`, planned ? `${planned} planned` : '', `${toGo} to go`].filter(Boolean).join(' · ')}</span></div>` : ''}
-    <div class="toolbar page-actions"><button class="btn btn-primary" onclick="App.eventForm()">Plan something</button><button class="btn" onclick="App.logForm()">Log interaction</button><button class="btn" onclick="App.personForm()">Add person</button></div>`;
+    ${total ? `<div class="week-progress"><div class="bar2"><span class="d" style="width:${done / total * 100}%"></span><span class="p" style="width:${planned / total * 100}%"></span></div><span>${[toGo ? `${toGo} to go` : 'All done', done ? `${done} done` : '', planned ? `${planned} planned` : ''].filter(Boolean).join(' · ')}</span></div>` : ''}`;
 
-  // banners: past plans awaiting confirmation, backup nudge
-  const pending = state.events.filter(e => !e.done && e.date < ws).sort(byDate).reverse();
+  // notices: install prompt, and past plans waiting for a yes/no
+  const onRows = new Set(plan.see.map(x => x.planned?.id).filter(Boolean));
+  const pending = state.events.filter(e => !e.done && e.date < t && !onRows.has(e.id)).sort(byDate).reverse();
   const rows = pending.map(e => `<div class="banner-row">
       <div class="grow"><b>Did this happen?</b> <span class="muted">${esc(e.title)} · ${eventWhen(e)}${e.personIds.length ? ' · ' + esc(listNames(names(e.personIds))) : ''}</span></div>
       <button class="btn btn-sm btn-primary" onclick="App.confirmEvent('${e.id}')">Yes</button>
-      <button class="btn btn-sm btn-quiet" onclick="App.eventForm('${e.id}')">Edit</button>
-      <button class="btn btn-sm btn-quiet" onclick="App.cancelEvent('${e.id}')">It didn't</button></div>`);
-  // this week's past, unconfirmed plans that aren't already shown on a card
-  const onCards = new Set(plan.see.map(x => x.planned?.id).filter(Boolean));
-  for (const e of state.events.filter(e => !e.done && e.date >= ws && e.date < t && !onCards.has(e.id)).sort(byDate))
-    rows.push(`<div class="banner-row"><div class="grow"><b>Did this happen?</b> <span class="muted">${esc(e.title)} · ${eventWhen(e)}${e.personIds.length ? ' · ' + esc(listNames(names(e.personIds))) : ''}</span></div>
-      <button class="btn btn-sm btn-primary" onclick="App.confirmEvent('${e.id}')">Yes</button>
-      <button class="btn btn-sm btn-quiet" onclick="App.eventForm('${e.id}')">Edit</button>
-      <button class="btn btn-sm btn-quiet" onclick="App.cancelEvent('${e.id}')">It didn't</button></div>`);
+      <button class="btn btn-sm btn-quiet" onclick="App.cancelEvent('${e.id}')">No</button></div>`);
   const ins = installBanner();
   if (ins) rows.unshift(ins);
   if (rows.length) h += `<div class="banner">${rows.join('')}</div>`;
@@ -931,111 +973,52 @@ function renderWeek() {
   const bdays = activePeople().map(p => ({ p, d: p.birthday && nextBirthday(p, ws) })).filter(x => x.d && x.d <= soonEnd).sort((a, b) => a.d.localeCompare(b.d));
   const fus = activePeople().flatMap(p => openFollowUps(p).filter(f => f.date && f.date <= plan.we).map(f => ({ p, f }))).sort((a, b) => a.f.date.localeCompare(b.f.date));
   if (bdays.length || fus.length) {
-    h += `<div class="section"><div class="eyebrow">Don't forget<span>${bdays.length + fus.length}</span></div></div><div class="rows">`;
-    h += bdays.map(({ p, d }) => `<div class="row task" ${RB} onclick="App.detail('${p.id}')"><span class="ring"></span>
-      <div class="row-main"><div class="name">${esc(p.name)}'s birthday</div>${meta(p)}</div>
-      <div class="cell right"><span class="cell-label">Birthday</span>${status(d < t ? 'soon' : diffDays(t, d) <= 1 ? 'due' : 'plan', relDay(d))}</div></div>`).join('');
-    h += fus.map(({ p, f }) => `<div class="row task" ${RB} onclick="App.detail('${p.id}')"><button class="tick" title="Mark done" aria-label="Mark done" onclick="event.stopPropagation();App.fuDone('${p.id}','${f.id}')"></button>
-      <div class="row-main"><div class="name">${esc(f.text)}</div><div class="meta"><span>${esc(p.name)}</span></div></div>
-      <div class="cell right"><span class="cell-label">Follow up</span>${status(f.date < t ? 'overdue' : f.date === t ? 'due' : 'plan', relDay(f.date))}</div></div>`).join('');
+    h += `<div class="section"><div class="eyebrow">Don't forget</div></div><div class="todos">`;
+    h += bdays.map(({ p, d }) => `<div class="todo" ${RB} onclick="App.detail('${p.id}')"><span class="ring" style="margin-top:1px"></span>
+      <div class="todo-main"><div class="todo-name">${esc(p.name)}'s birthday</div><div class="todo-sub">${esc(levelInfo(p).label)}</div></div>
+      <div class="todo-right">${status(d < t ? 'soon' : diffDays(t, d) <= 1 ? 'due' : 'plan', relDay(d))}</div></div>`).join('');
+    h += fus.map(({ p, f }) => `<div class="todo" ${RB} onclick="App.detail('${p.id}')"><button class="tick" title="Mark done" aria-label="Mark done" onclick="event.stopPropagation();App.fuDone('${p.id}','${f.id}')"></button>
+      <div class="todo-main"><div class="todo-name">${esc(f.text)}</div><div class="todo-sub">${esc(p.name)}</div></div>
+      <div class="todo-right">${status(f.date < t ? 'overdue' : f.date === t ? 'due' : 'plan', relDay(f.date))}</div></div>`).join('');
     h += `</div>`;
   }
 
-  if (!total) h += `<div class="quiet-box" style="margin-top:44px"><h3>All caught up.</h3><p style="margin:0">Everyone is on track this week. Reach out to someone anyway if you feel like it.</p></div>`;
+  if (!total) h += `<div class="quiet-box" style="margin-top:44px"><h3>All caught up.</h3><p style="margin:0">Everyone is on track this week.</p></div>`;
 
   if (plan.see.length) {
-    h += `<div class="section"><div class="eyebrow">See in person<span>${plan.see.filter(x => x.done).length}/${plan.see.length}</span></div><div class="section-note">Time together builds closeness fastest</div></div>`;
-    // group suggestions
+    h += `<div class="section"><div class="eyebrow">See in person<span>${plan.see.filter(x => x.done).length}/${plan.see.length}</span></div></div><div class="todos">`;
     const open = plan.see.filter(x => !x.done && !x.planned);
     const byGroup = {};
     for (const x of open) for (const g of x.p.groups || []) (byGroup[g] = byGroup[g] || []).push(x.p.id);
-    groupSugs = Object.entries(byGroup).filter(([, ids]) => ids.length >= 2).sort((a, b) => b[1].length - a[1].length).slice(0, 2);
-    if (groupSugs.length) h += `<div class="banner" style="margin:0 0 14px">${groupSugs.map(([g, ids], i) => `<div class="banner-row">
-      <div class="grow"><b>${esc(g)}</b> <span class="muted">${esc(listNames(names(ids)))} are all due. One plan together covers everyone.</span></div>
-      <button class="btn btn-sm" onclick="App.planGroup(${i})">Plan together</button></div>`).join('')}</div>`;
-    h += `<div class="cards">`;
+    groupSugs = Object.entries(byGroup).filter(([, ids]) => ids.length >= 2).sort((a, b) => b[1].length - a[1].length).slice(0, 1);
+    for (const [g, ids] of groupSugs) h += `<div class="group-hint"><span><b>${esc(g)}</b>: ${esc(listNames(names(ids)))} are all due.</span><button class="btn btn-sm" onclick="App.planGroup(0)">Plan together</button></div>`;
     for (const it of plan.see) {
-      const { p } = it, s = stats(p);
-      const e = it.planned;
-      let st, body, actions = '';
-      if (it.done) {
-        st = status('good', `Done ${wd(it.done.date)}`);
-        body = `<p class="idea">Saw them ${wd(it.done.date)}${+it.done.hours ? ` for ${fmtH(+it.done.hours)}` : ''}${it.done.note ? `. ${esc(it.done.note)}` : '.'}</p>`;
-      } else if (e && e.date < t) {
-        st = status('due', 'Confirm');
-        body = `<p class="idea"><b>${esc(e.title)}</b> · ${eventWhen(e)}</p>`;
-        actions = `<button class="btn btn-primary btn-sm" onclick="App.confirmEvent('${e.id}')">It happened</button>
-          <button class="btn btn-sm" onclick="App.eventForm('${e.id}')">Edit</button>
-          <button class="btn btn-quiet btn-sm" onclick="App.cancelEvent('${e.id}')">It didn't</button>`;
-      } else if (e) {
-        st = status('plan', `Planned ${e.date > plan.we ? relDay(e.date) : wd(e.date)}`);
-        body = `<p class="idea"><b>${esc(e.title)}</b> · ${eventWhen(e)}${e.location ? ' · ' + esc(e.location) : ''}</p>${extraLines(p, s, ws, plan.we)}`;
-        actions = `<button class="btn btn-sm" onclick="App.eventForm('${e.id}')">View plan</button>`;
-      } else {
-        st = dueStatus(it.due);
-        const notes = extraLines(p, s, ws, plan.we);
-        body = notes ? `<div class="card-notes">${notes}</div>` : '';
-        actions = `<button class="btn btn-primary btn-sm" onclick="App.eventForm(null,{personIds:['${p.id}']})">Schedule</button>
-          <button class="btn btn-sm" onclick="App.logForm('${p.id}','hangout')">Log time together</button>
-          <button class="btn btn-quiet btn-sm" onclick="App.skip('${p.id}','hang')">Skip this week</button>`;
-      }
-      h += `<article class="card ${it.done ? 'is-done' : ''}">
-        <div class="card-top"><button class="name" onclick="App.detail('${p.id}')">${esc(p.name)}</button>${st}</div>
-        ${meta(p, [s.lastHang ? `last seen ${ago(since(s.lastHang))}` : 'not seen yet', s.hours ? `${fmtH(s.hours)} together` : ''])}
-        ${body}
-        ${actions ? `<div class="actions">${actions}</div>` : ''}</article>`;
+      const { p } = it, s = stats(p), e = it.planned;
+      const seen = s.lastHang ? `last seen ${ago(since(s.lastHang))}` : 'not seen yet';
+      if (it.done) h += todoRow({ p, kind: 'see', done: true, tickClass: 'done', tickAction: `App.detail('${p.id}')`, tickLabel: 'Done', sub: `Saw them ${shortDay(it.done.date)}${+it.done.hours ? ` · ${fmtH(+it.done.hours)}` : ''}`, right: status('good', 'Done') });
+      else if (e && e.date < t) h += todoRow({ p, kind: 'see', tickAction: `App.confirmEvent('${e.id}')`, tickLabel: 'It happened', sub: `${e.title} · ${eventWhen(e)}`, right: status('due', 'Did it happen?') });
+      else if (e) h += todoRow({ p, kind: 'see', tickClass: 'plan', tickAction: `App.timeSheet('${p.id}')`, tickLabel: 'Log time together', sub: `${e.title} · ${wd(e.date)}${e.time ? ' ' + fmtTime(e.time) : ''}`, right: status('plan', `Planned ${e.date > plan.we ? relDay(e.date) : wd(e.date)}`), note: todoNote(p) });
+      else h += todoRow({ p, kind: 'see', tickAction: `App.timeSheet('${p.id}')`, tickLabel: 'Log time together', sub: `${levelInfo(p).label} · ${seen}`, right: dueStatus(it.due), note: todoNote(p) });
     }
     h += `</div>`;
   }
 
   if (plan.text.length) {
-    h += `<div class="section"><div class="eyebrow">Check in<span>${plan.text.filter(x => x.done).length}/${plan.text.length}</span></div><div class="section-note">A short message is enough</div></div><div class="cards">`;
+    h += `<div class="section"><div class="eyebrow">Check in<span>${plan.text.filter(x => x.done).length}/${plan.text.length}</span></div></div><div class="todos">`;
     for (const it of plan.text) {
       const { p } = it, s = stats(p);
-      const st = it.done ? status('good', 'Done') : it.times > 1 ? status(it.count ? 'soon' : 'due', `${it.count} of ${it.times} this week`) : dueStatus(it.due);
-      h += `<article class="card ${it.done ? 'is-done' : ''}">
-        <div class="card-top"><button class="name" onclick="App.detail('${p.id}')">${esc(p.name)}</button>${st}</div>
-        ${meta(p, [p.remote && p.location ? p.location : '', s.lastAny ? `last contact ${ago(since(s.lastAny))}` : 'no contact yet'])}
-        ${it.done ? `<p class="idea">In touch ${s.lastAny ? wd(s.lastAny) : ''}.</p>` : `${(n => n ? `<div class="card-notes">${n}</div>` : '')(extraLines(p, s, ws, plan.we))}
-        <div class="actions">
-          <button class="btn btn-primary btn-sm" onclick="App.quickLog('${p.id}','text')">Texted</button>
-          <button class="btn btn-sm" onclick="App.quickLog('${p.id}','call')">Called</button>
-          <button class="btn btn-sm" onclick="App.quickLog('${p.id}','text',false,'them')" title="They messaged you first">They reached out</button>
-          <button class="btn btn-quiet btn-sm" onclick="App.skip('${p.id}','text')">Skip</button>
-        </div>`}</article>`;
+      const last = s.lastAny ? `last talked ${ago(since(s.lastAny))}` : 'no contact yet';
+      if (it.done) h += todoRow({ p, kind: 'text', done: true, tickClass: 'done', tickAction: `App.detail('${p.id}')`, tickLabel: 'Done', sub: s.lastAny ? `Talked ${shortDay(s.lastAny)}` : 'Done', right: status('good', 'Done') });
+      else h += todoRow({ p, kind: 'text', tickAction: `App.quickLog('${p.id}','text')`, tickLabel: 'Checked in',
+        sub: [levelInfo(p).label, p.remote && p.location ? p.location : '', last].filter(Boolean).join(' · '),
+        right: it.times > 1 ? status(it.count ? 'soon' : 'due', `${it.count} of ${it.times}`) : dueStatus(it.due), note: todoNote(p) });
     }
     h += `</div>`;
   }
 
-  if (plan.hidden > 0) h += `<p class="muted small" style="margin-top:18px">${plan.hidden} more could use attention. Orbit keeps the weekly list manageable. <button class="linkish" onclick="App.toggleAll()">Show all</button></p>`;
+  if (plan.hidden > 0) h += `<p class="muted small" style="margin-top:18px">${plan.hidden} more could use attention. <button class="linkish" onclick="App.toggleAll()">Show all</button></p>`;
   else if (showAll) h += `<p class="muted small" style="margin-top:18px"><button class="linkish" onclick="App.toggleAll()">Show fewer</button></p>`;
-
-  // this week's plans
-  const evs = state.events.filter(e => e.date >= ws && e.date <= plan.we).sort(byDate);
-  h += `<div class="section"><div class="eyebrow">Plans this week<span>${evs.length}</span></div><button class="linkish small" onclick="App.go('calendar')">Open calendar</button></div>`;
-  h += evs.length ? `<div class="rows">${evs.map(planRow).join('')}</div>` : `<p class="muted small">Nothing on the calendar yet. <button class="linkish" onclick="App.eventForm()">Plan something</button></p>`;
-
-  // next week preview
-  const ids = new Set(items.map(x => x.p.id));
-  const next = weekPlan(addDays(ws, 7));
-  const nextRows = [...next.see.map(x => ({ ...x, kind: 'See' })), ...next.text.map(x => ({ ...x, kind: 'Check in' }))]
-    .filter(x => !ids.has(x.p.id)).filter((x, i, a) => a.findIndex(y => y.p.id === x.p.id) === i).slice(0, 6);
-  if (nextRows.length) {
-    h += `<div class="section"><div class="eyebrow">Next week<span>${nextRows.length}</span></div><div class="section-note">${rangeLabel(next.ws)}</div></div><div class="rows">`;
-    h += nextRows.map(x => `<div class="row simple" ${RB} onclick="App.detail('${x.p.id}')"><span class="dot s-soon"></span>
-      <div class="row-main"><div class="name">${esc(x.p.name)}</div>${meta(x.p)}</div>
-      <div class="cell right"><span class="cell-label">${x.kind}</span><span>${x.planned ? `Planned ${wd(x.planned.date)}` : `By ${wd(x.due < next.ws ? next.ws : x.due)}`}</span></div></div>`).join('') + `</div>`;
-  }
   return h;
-}
-function planRow(e) {
-  const who = names(e.personIds);
-  const st = e.done ? status('good', 'Done') : e.date < today() ? status('due', 'Confirm') : status('plan', 'Planned');
-  const sr = seriesOf(e);
-  return `<div class="row plan" ${RB} onclick="App.eventForm('${e.id}')">
-    <div class="when-col"><b>${wd(e.date)} ${parseD(e.date).getDate()}</b><span>${e.time ? fmtTime(e.time) : 'Any time'}</span></div>
-    <div class="row-main"><div class="name">${esc(e.title)}</div><div class="meta"><span>${esc([who.length ? listNames(who) : 'No one added', e.location, sr?.repeat ? REPEAT_LABEL[sr.repeat].toLowerCase() : ''].filter(Boolean).join(' · '))}</span></div></div>
-    ${st}</div>`;
 }
 
 /* calendar */
@@ -1051,7 +1034,6 @@ function renderCalendar() {
       <button class="btn btn-icon" onclick="App.calShift(-7)" aria-label="Previous week">&lsaquo;</button>
       <button class="btn" onclick="App.calShift(0)" ${isThis ? 'disabled style="opacity:.5"' : ''}>Today</button>
       <button class="btn btn-icon" onclick="App.calShift(7)" aria-label="Next week">&rsaquo;</button>
-      <button class="btn btn-primary page-actions" style="margin-left:8px" onclick="App.eventForm(null,{date:'${isThis ? t : ws}'})">Add activity</button>
     </div></div>
   <div class="cal">`;
   for (const d of days) {
@@ -1106,10 +1088,6 @@ function renderPeople() {
     <input class="search" id="q" placeholder="Search" value="${esc(pf.q)}" oninput="App.search(this.value)">
     <div class="seg-tabs">${tab('all', 'All')}${tab('friend', 'Friends')}${tab('acq', 'Acquaintances')}${nL ? tab('remote', 'Long distance') : ''}${nX ? tab('archived', 'Archived') : ''}</div>
     ${groups.length ? `<select class="inline" onchange="App.pf('group',this.value)"><option value="">All groups</option>${groups.map(g => `<option value="${esc(g)}" ${pf.group === g ? 'selected' : ''}>${esc(g)}</option>`).join('')}</select>` : ''}
-    <select class="inline" onchange="App.pf('sort',this.value)">
-      ${[['urgency', 'Most due'], ['level', 'Closeness'], ['name', 'Name'], ['recent', 'Recent contact']].map(([v, l]) => `<option value="${v}" ${pf.sort === v ? 'selected' : ''}>${l}</option>`).join('')}
-    </select>
-    <div class="page-actions" style="margin-left:auto;display:flex;gap:8px"><button class="btn" onclick="App.bulkForm()">Add several</button><button class="btn btn-primary" onclick="App.personForm()">Add person</button></div>
   </div>`;
   if (!state.people.length) return h + emptyState();
   if (!ppl.length) return h + `<p class="muted" style="margin-top:32px">No one matches.</p>`;
@@ -1117,12 +1095,15 @@ function renderPeople() {
   for (const p of ppl) {
     const s = S.get(p.id);
     const prog = p.kind === 'acq' ? `<div class="bar" style="margin-top:9px;max-width:200px" title="${fmtH(s.hours)} of about 50h to casual friend"><span style="width:${Math.min(100, s.hours / 50 * 100)}%"></span></div>` : '';
-    const textCell = `<div class="cell"><span class="cell-label">Check in</span>${s.tSkipped ? '<span class="muted">Skipped</span>' : status(statusOf(s.tRatio), dueIn(s.textRem))}</div>`;
-    const seeCell = `<div class="cell"><span class="cell-label">See</span>${p.remote ? `<span class="muted">${s.upcoming[0] ? `Visit ${wd(s.upcoming[0].date)}` : 'Long distance'}</span>` : s.upcoming[0] ? status('plan', `Planned ${relDay(s.upcoming[0].date)}`) : s.hSkipped ? '<span class="muted">Skipped</span>' : status(statusOf(s.hRatio), dueIn(s.hangRem))}</div>`;
-    h += `<div class="row" ${RB} onclick="App.detail('${p.id}')">
+    // one status: whichever is more pressing
+    let label, st;
+    if (!p.remote && s.upcoming[0]) { label = 'See'; st = status('plan', `Planned ${relDay(s.upcoming[0].date)}`); }
+    else if (!p.remote && !s.hSkipped && s.hRatio >= s.tRatio) { label = 'See'; st = status(statusOf(s.hRatio), dueIn(s.hangRem)); }
+    else { label = 'Check in'; st = s.tSkipped ? '<span class="muted">Skipped</span>' : status(statusOf(s.tRatio), dueIn(s.textRem)); }
+    h += `<div class="row simple" ${RB} onclick="App.detail('${p.id}')">
       <span class="dot s-${s.status}" title="${STATUS_LABEL[s.status]}"></span>
-      <div class="row-main"><div class="name">${esc(p.name)}</div>${meta(p, [s.lastAny ? `last contact ${ago(since(s.lastAny))}` : '', (p.groups || []).join(', ')])}${prog}</div>
-      ${textCell}${seeCell}
+      <div class="row-main"><div class="name">${esc(p.name)}</div>${meta(p, [s.lastAny ? `last contact ${ago(since(s.lastAny))}` : ''])}${prog}</div>
+      <div class="cell right"><span class="cell-label">${label}</span>${st}</div>
     </div>`;
   }
   return h + `</div>`;
@@ -1329,15 +1310,21 @@ document.addEventListener('keydown', e => {
 });
 
 const approxSelect = id => `<select id="${id}">${APPROX.map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>`;
+const SHORT_LEVEL = { friend: { 1: 'Inner circle', 2: 'Close', 3: 'Good', 4: 'Casual' }, acq: { 1: 'High', 2: 'Medium', 3: 'Low' } };
+function levelPills(k, sel) {
+  const name = k === 'friend' ? 'f-tier' : 'f-interest';
+  return `<div class="pills">${Object.entries(LEVELS[k]).map(([l, L]) => `<label class="pill-opt ${k === 'acq' ? 'acq' : ''}"><input type="radio" name="${name}" value="${l}" ${+sel === +l ? 'checked' : ''} onchange="App.levelHint('${k}')"><span>${SHORT_LEVEL[k][l]}</span></label>`).join('')}</div>
+    <span class="hint" id="${name}-hint">${esc(LEVELS[k][sel].hint)}</span>`;
+}
+const pickedLevel = k => +(document.querySelector(`input[name=${k === 'friend' ? 'f-tier' : 'f-interest'}]:checked`)?.value || (k === 'friend' ? 3 : 1));
 function kindFields(p) {
-  const opt = (k, sel) => Object.entries(LEVELS[k]).map(([l, L]) => `<option value="${l}" ${+sel === +l ? 'selected' : ''}>${L.label}: ${esc(L.hint)}</option>`).join('');
   return `<div class="field"><label>Relationship</label>
     <div class="choice">
       <label><input type="radio" name="f-kind" value="friend" ${p.kind === 'friend' ? 'checked' : ''} onchange="App.kindToggle()"><span>Friend</span><small>An existing friendship to keep up</small></label>
       <label class="acq"><input type="radio" name="f-kind" value="acq" ${p.kind === 'acq' ? 'checked' : ''} onchange="App.kindToggle()"><span>Acquaintance</span><small>Recently met, want to grow it</small></label>
     </div></div>
-  <div class="field" id="f-tier-wrap"><label>Closeness</label><select id="f-tier">${opt('friend', p.tier || 3)}</select></div>
-  <div class="field" id="f-int-wrap"><label>Interest in becoming friends</label><select id="f-interest">${opt('acq', p.interest || 1)}</select></div>`;
+  <div class="field" id="f-tier-wrap"><label>Closeness</label>${levelPills('friend', p.tier || 3)}</div>
+  <div class="field" id="f-int-wrap"><label>Interest in becoming friends</label>${levelPills('acq', p.interest || 1)}</div>`;
 }
 
 function personFormHtml(p, kindDefault) {
@@ -1347,13 +1334,14 @@ function personFormHtml(p, kindDefault) {
   return `<h2>${isNew ? 'Add a person' : 'Edit ' + esc(p.name)}</h2>
   <div class="field"><label>Name</label><input id="f-name" value="${esc(p.name || '')}" autofocus></div>
   ${kindFields(p)}
-  <div class="field"><label>Groups</label>${gtagHtml()}<span class="hint">Add as many as fit, like College, Work, Climbing.</span></div>
-  <label class="check"><input type="checkbox" id="f-remote" ${p.remote ? 'checked' : ''} onchange="App.remoteToggle()"><span>Long distance<small>Check-ins only. No suggestions to meet up in person, but you can still log visits.</small></span></label>
-  <div class="field" id="f-loc-wrap" style="${p.remote ? '' : 'display:none'}"><label>Where they live</label><input id="f-location" value="${esc(p.location || '')}" placeholder="Optional, e.g. Chicago"></div>
   ${isNew ? `<div class="two">
-    <div class="field"><label>Last in touch</label>${approxSelect('f-seedText')}</div>
-    <div class="field"><label>Last saw them in person</label>${approxSelect('f-seedHang')}</div>
-  </div><p class="muted small" style="margin:8px 0 0">A rough guess is fine. It starts their timers from the right place.</p>` : ''}
+    <div class="field"><label>Last talked</label>${approxSelect('f-seedText')}</div>
+    <div class="field"><label>Last saw them</label>${approxSelect('f-seedHang')}</div>
+  </div>` : ''}
+  <details class="more" ${isNew ? '' : 'open'}><summary>More details</summary>
+  <div class="field"><label>Groups</label>${gtagHtml()}</div>
+  <label class="check"><input type="checkbox" id="f-remote" ${p.remote ? 'checked' : ''} onchange="App.remoteToggle()"><span>Long distance<small>Check-ins only, no meet-up suggestions.</small></span></label>
+  <div class="field" id="f-loc-wrap" style="${p.remote ? '' : 'display:none'}"><label>Where they live</label><input id="f-location" value="${esc(p.location || '')}" placeholder="Optional, e.g. Chicago"></div>
   <div class="two">
     <div class="field"><label>Birthday</label><div class="bday-fields">
       <select id="f-bmonth"><option value="">Month</option>${MONTHS.map((m, i) => `<option value="${pad(i + 1)}" ${bm === pad(i + 1) ? 'selected' : ''}>${m}</option>`).join('')}</select>
@@ -1363,11 +1351,11 @@ function personFormHtml(p, kindDefault) {
   <div class="field"><label>Where you met</label><input id="f-metAt" value="${esc(p.metAt || '')}" placeholder="Optional"></div>
   <div class="field"><label>Interests</label><input id="f-interests" value="${esc(p.interests || '')}" placeholder="Comma separated"></div>
   <div class="field"><label>Notes</label><textarea id="f-notes" placeholder="What's going on in their life, people in their world, anything worth remembering">${esc(p.notes || '')}</textarea></div>
-  <details><summary>Custom cadence for this person</summary>
-    <div class="two">
-      <div class="field"><label>Check in every (days)</label><input type="number" min="1" id="f-textEvery" value="${esc(p.textEvery || '')}" placeholder="Default"></div>
-      <div class="field"><label>See in person every (days)</label><input type="number" min="1" id="f-hangEvery" value="${esc(p.hangEvery || '')}" placeholder="Default"></div>
-    </div></details>
+  <div class="two">
+    <div class="field"><label>Check in every</label><input type="number" min="1" id="f-textEvery" value="${esc(p.textEvery || '')}" placeholder="Default days"></div>
+    <div class="field"><label>See in person every</label><input type="number" min="1" id="f-hangEvery" value="${esc(p.hangEvery || '')}" placeholder="Default days"></div>
+  </div>
+  </details>
   <div class="foot">
     <button class="btn btn-quiet" onclick="${isNew ? 'App.close()' : `App.detail('${p.id}')`}">Cancel</button>
     <button class="btn btn-primary" onclick="App.savePerson(${isNew ? 'null' : `'${p.id}'`})">${isNew ? 'Add person' : 'Save'}</button>
@@ -1382,8 +1370,8 @@ function bulkFormHtml() {
   <label class="check"><input type="checkbox" id="b-remote"><span>Long distance<small>Check-ins only.</small></span></label>
   <div class="field"><label>Groups</label>${gtagHtml()}<span class="hint">Optional. Everyone above joins these groups.</span></div>
   <div class="two">
-    <div class="field"><label>Last in touch</label>${approxSelect('f-seedText')}</div>
-    <div class="field"><label>Last saw them in person</label>${approxSelect('f-seedHang')}</div>
+    <div class="field"><label>Last talked</label>${approxSelect('f-seedText')}</div>
+    <div class="field"><label>Last saw them</label>${approxSelect('f-seedHang')}</div>
   </div>
   <div class="foot">
     <button class="btn btn-quiet" onclick="App.close()">Cancel</button>
@@ -1395,23 +1383,22 @@ function logFormHtml(pid, type) {
   type = type || 'hangout';
   return `<h2>Log interaction</h2>
   <div class="field"><label>With</label>${comboHtml(!pid)}</div>
-  <div class="field"><label>Type</label><div class="choice">
+  <div class="field"><label>How</label><div class="pills">
     ${[['text', 'Text'], ['call', 'Call'], ['hangout', 'In person']].map(([v, l]) =>
-      `<label><input type="radio" name="l-type" value="${v}" ${type === v ? 'checked' : ''} onchange="App.typeToggle()"><span>${l}</span></label>`).join('')}
+      `<label class="pill-opt"><input type="radio" name="l-type" value="${v}" ${type === v ? 'checked' : ''} onchange="App.typeToggle()"><span>${l}</span></label>`).join('')}
   </div></div>
-  <div class="two">
+  <div class="field" id="l-hours-wrap"><label>How long</label><div class="pills">
+    ${[1, 2, 3, 4, 6].map(h => `<label class="pill-opt"><input type="radio" name="l-hours" value="${h}" ${h === 2 ? 'checked' : ''}><span>${h}h</span></label>`).join('')}
+  </div></div>
+  <label class="check"><input type="checkbox" id="l-them"><span>They reached out first</span></label>
+  <details class="more"><summary>More details</summary>
     <div class="field"><label>Date</label><input type="date" id="l-date" value="${today()}" max="${today()}"></div>
-    <div class="field" id="l-hours-wrap"><label>Hours together</label><input type="number" id="l-hours" min="0" step="0.5" value="2"></div>
-  </div>
-  <div class="field"><label>Who reached out</label><div class="choice">
-    <label><input type="radio" name="l-by" value="me" checked><span>You</span></label>
-    <label><input type="radio" name="l-by" value="them"><span>They did</span></label>
-  </div></div>
-  <div class="field"><label>Note</label><textarea id="l-note" placeholder="What you talked about"></textarea></div>
-  <div class="two">
-    <div class="field"><label>Follow up on</label><input id="l-fu" placeholder="Optional, e.g. ask how the interview went"></div>
-    <div class="field"><label>By</label><input type="date" id="l-fu-date" min="${today()}"></div>
-  </div>
+    <div class="field"><label>Note</label><textarea id="l-note" placeholder="What you talked about"></textarea></div>
+    <div class="two">
+      <div class="field"><label>Follow up on</label><input id="l-fu" placeholder="e.g. ask how the interview went"></div>
+      <div class="field"><label>By</label><input type="date" id="l-fu-date" min="${today()}"></div>
+    </div>
+  </details>
   <div class="foot">
     <button class="btn btn-quiet" onclick="App.close()">Cancel</button>
     <button class="btn btn-primary" onclick="App.saveLog()">Save</button>
@@ -1427,19 +1414,23 @@ function eventFormHtml(e) {
   return `<h2>${isNew ? 'Plan an activity' : esc(e.title)}</h2>
   ${!isNew && e.done ? `<p class="sub">Happened. Counted as time together for everyone who went.</p>` : ''}
   <div class="field"><label>What</label><input id="e-title" value="${esc(e.title || '')}" placeholder="Dinner, climbing, game night" ${isNew ? 'autofocus' : ''}></div>
-  <div class="three">
-    <div class="field"><label>Date</label><input type="date" id="e-date" value="${e.date}" onchange="App.evDateChange()"></div>
-    <div class="field"><label>Time</label><input type="time" id="e-time" value="${esc(e.time || '')}"></div>
-    <div class="field"><label>Hours</label><input type="number" id="e-hours" min="0" step="0.5" value="${e.hours ?? 2}"></div>
-  </div>
-  <div class="field"><label>Repeats</label><select id="e-repeat">${Object.entries(REPEAT_LABEL).map(([v, l]) => `<option value="${v}" ${repeat === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
-    ${sr?.repeat ? `<span class="hint">Changes apply to this and upcoming repeats.</span>` : `<span class="hint">A standing plan means no re-planning.</span>`}</div>
   <div class="field"><label>Who</label>
     ${activePeople().length ? `${comboHtml(false)}
     ${groups.length ? `<div class="group-links" style="margin:8px 0 0">Add a group:${groups.map((g, i) => ` <button type="button" class="linkish" onclick="App.pickGroup(${i})">${esc(g)}</button>`).join('')}</div>` : ''}` : `<span class="hint">Add people first to tag them here.</span>`}
   </div>
-  <div class="field"><label>Where</label><input id="e-location" value="${esc(e.location || '')}" placeholder="Optional"></div>
-  <div class="field"><label>Notes</label><textarea id="e-note" placeholder="Optional">${esc(e.note || '')}</textarea></div>
+  <div class="two">
+    <div class="field"><label>Date</label><input type="date" id="e-date" value="${e.date}" onchange="App.evDateChange()"></div>
+    <div class="field"><label>Time</label><input type="time" id="e-time" value="${esc(e.time || '')}"></div>
+  </div>
+  <details class="more" ${!isNew && (sr?.repeat || e.location || e.note) ? 'open' : ''}><summary>More details</summary>
+    <div class="two">
+      <div class="field"><label>Hours</label><input type="number" id="e-hours" min="0" step="0.5" value="${e.hours ?? 2}"></div>
+      <div class="field"><label>Repeats</label><select id="e-repeat">${Object.entries(REPEAT_LABEL).map(([v, l]) => `<option value="${v}" ${repeat === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+    </div>
+    ${sr?.repeat ? `<span class="hint">Changes apply to this and upcoming repeats.</span>` : ''}
+    <div class="field"><label>Where</label><input id="e-location" value="${esc(e.location || '')}" placeholder="Optional"></div>
+    <div class="field"><label>Notes</label><textarea id="e-note" placeholder="Optional">${esc(e.note || '')}</textarea></div>
+  </details>
   <label class="check" id="e-done-wrap" style="${past ? '' : 'display:none'}"><input type="checkbox" id="e-done" ${e.done || (isNew && e.date < today()) ? 'checked' : ''}><span>This happened<small>Counts as time together for everyone tagged.</small></span></label>
   <div class="foot">
     ${isNew ? '' : `<button class="btn btn-quiet btn-danger left" onclick="App.deleteEvent('${e.id}')">Delete</button>${sr?.repeat ? `<button class="btn btn-quiet btn-danger" onclick="App.deleteEvent('${e.id}',true)">Delete all upcoming</button>` : ''}`}
@@ -1577,7 +1568,7 @@ function detailHtml(p) {
   const fus = openFollowUps(p);
   const upcoming = s.upcoming.length ? `<div class="label" style="margin-top:26px">Upcoming plans</div><div class="history">${s.upcoming.slice(0, 5).map(e =>
     `<div class="log click" ${RB} onclick="App.eventForm('${e.id}')"><span class="when">${wd(e.date)} ${parseD(e.date).getDate()}</span><span>${esc(e.title)}${e.time ? `<span class="muted"> · ${fmtTime(e.time)}</span>` : ''}${seriesOf(e)?.repeat ? `<span class="muted"> · ${REPEAT_LABEL[seriesOf(e).repeat].toLowerCase()}</span>` : ''}</span><span></span></div>`).join('')}</div>` : '';
-  const logs = histAll ? s.logs : s.logs.slice(0, 12);
+  const logs = histAll ? s.logs : s.logs.slice(0, 6);
   return `<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
       <div><h2>${esc(p.name)}</h2>${meta(p, [met ? `met ${met}` : ''])}</div>
       ${status(s.status, p.archived ? 'Archived' : STATUS_LABEL[s.status])}</div>
@@ -1594,18 +1585,13 @@ function detailHtml(p) {
     ${(p.groups || []).length ? `<div class="notes-block"><span class="label">Groups</span>${esc(p.groups.join(', '))}</div>` : ''}
     ${p.interests ? `<div class="notes-block"><span class="label">Interests</span>${esc(p.interests)}</div>` : ''}
     ${p.notes ? `<div class="notes-block"><span class="label">Notes</span>${esc(p.notes)}</div>` : ''}
-    <div class="actions" style="margin-top:22px">${p.remote ? `
-      <button class="btn btn-primary btn-sm" onclick="App.quickLog('${p.id}','text',true)">Texted today</button>
-      <button class="btn btn-sm" onclick="App.quickLog('${p.id}','call',true)">Called today</button>
-      <button class="btn btn-sm" onclick="App.quickLog('${p.id}','text',true,'them')">They reached out</button>
-      <button class="btn btn-sm" onclick="App.eventForm(null,{personIds:['${p.id}']})">Plan a visit</button>
-      <button class="btn btn-sm" onclick="App.logForm('${p.id}','hangout')">Log a visit</button>` : `
-      <button class="btn btn-primary btn-sm" onclick="App.eventForm(null,{personIds:['${p.id}']})">Schedule</button>
-      <button class="btn btn-sm" onclick="App.logForm('${p.id}','hangout')">Log time together</button>
-      <button class="btn btn-sm" onclick="App.quickLog('${p.id}','text',true)">Texted today</button>
-      <button class="btn btn-sm" onclick="App.quickLog('${p.id}','call',true)">Called today</button>
-      <button class="btn btn-sm" onclick="App.quickLog('${p.id}','text',true,'them')">They reached out</button>`}
+    <div class="actions" style="margin-top:22px">
+      <button class="btn btn-sm" onclick="App.quickLog('${p.id}','text',true)">Texted</button>
+      <button class="btn btn-sm" onclick="App.quickLog('${p.id}','call',true)">Called</button>
+      <button class="btn btn-sm" onclick="App.timeSheet('${p.id}',0,true)">${p.remote ? 'Visited' : 'Saw them'}</button>
+      <button class="btn btn-primary btn-sm" onclick="App.eventForm(null,{personIds:['${p.id}']})">Plan</button>
     </div>
+    <button class="linkish small" style="margin-top:10px" onclick="App.quickLog('${p.id}','text',true,'them')">They reached out to me</button>
     <div class="label" style="margin-top:26px">Follow-ups</div>
     <div class="history">${fus.map(f => `<div class="log fu"><button class="tick" title="Mark done" aria-label="Mark done" onclick="App.fuDone('${p.id}','${f.id}',true)"></button><span>${esc(f.text)}${f.date ? `<span class="muted"> · ${relDay(f.date)}</span>` : ''}</span><button class="x" title="Delete" onclick="App.fuDel('${p.id}','${f.id}')">&times;</button></div>`).join('')}</div>
     <div class="inline-add"><input id="fu-text" placeholder="Something to ask about next time" onkeydown="if(event.key==='Enter')App.fuAdd('${p.id}')"><input type="date" id="fu-date" min="${today()}" title="Optional date"><button class="btn btn-sm" onclick="App.fuAdd('${p.id}')">Add</button></div>
@@ -1697,6 +1683,40 @@ const App = {
   pf(k, v) { pf[k] = v; render(); },
   search(v) { pf.q = v; render(); const q = $('#q'); q.focus(); q.setSelectionRange(v.length, v.length); },
   calShift(n) { calWeek = n === 0 ? weekStart(today()) : addDays(calWeek, n); render(); },
+  rowSheet(pid, kind) {
+    const p = person(pid), s = stats(p), t = today();
+    const item = (fn, title, sub) => `<button onclick="App.close();${fn}"><b>${title}</b>${sub ? `<span>${sub}</span>` : ''}</button>`;
+    const list = [];
+    if (kind === 'see') {
+      const pend = state.events.find(e => !e.done && e.personIds.includes(pid) && e.date < t);
+      if (pend) list.push(item(`App.confirmEvent('${pend.id}')`, `${esc(pend.title)} happened`, eventWhen(pend)));
+      list.push(item(`App.timeSheet('${pid}')`, 'Log time together', 'Pick how long'));
+      const up = s.upcoming[0];
+      list.push(up ? item(`App.eventForm('${up.id}')`, 'View plan', `${esc(up.title)} · ${eventWhen(up)}`) : item(`App.eventForm(null,{personIds:['${pid}']})`, 'Plan something', 'Put it on the calendar'));
+      list.push(item(`App.skip('${pid}','hang')`, 'Skip this week'));
+    } else {
+      list.push(item(`App.quickLog('${pid}','text')`, 'Texted'), item(`App.quickLog('${pid}','call')`, 'Called'),
+        item(`App.quickLog('${pid}','text',false,'them')`, 'They reached out'), item(`App.skip('${pid}','text')`, 'Skip this week'));
+    }
+    list.push(item(`App.detail('${pid}')`, 'Open profile'));
+    openModal(`<h2>${esc(p.name)}</h2><p class="sub">${esc([levelInfo(p).label, s.lastAny ? `last talked ${ago(since(s.lastAny))}` : ''].filter(Boolean).join(' · '))}</p><div class="sheet-list">${list.join('')}</div>`);
+  },
+  timeSheet(pid, back, fromDetail) {
+    const p = person(pid), off = back || 0;
+    openModal(`<h2>Time with ${esc(p.name)}</h2>
+      <div class="seg-tabs" style="margin-top:14px">${['Today', 'Yesterday'].map((l, i) => `<button class="${off === i ? 'on' : ''}" onclick="App.timeSheet('${pid}',${i},${!!fromDetail})">${l}</button>`).join('')}</div>
+      <div class="hour-chips">${[1, 2, 3, 4, 6].map(h => `<button class="hchip" onclick="App.logTime('${pid}',${h},${off},${!!fromDetail})">${h}h</button>`).join('')}</div>
+      <p class="muted small" style="margin:12px 0 0">Tap how long you were together.</p>
+      <div class="foot"><button class="btn btn-quiet left" onclick="App.logForm('${pid}','hangout')">More options</button><button class="btn btn-quiet" onclick="${fromDetail ? `App.detail('${pid}')` : 'App.close()'}">Cancel</button></div>`);
+  },
+  logTime(pid, hours, back, fromDetail) {
+    const p = person(pid), before = stats(p).hours;
+    const l = addLog(pid, 'hangout', addDays(today(), -(back || 0)), hours, '');
+    save(); closeModal(); render();
+    if (fromDetail) App.detail(pid);
+    milestoneToast(p, before, () => toast(`Logged ${hours}h with ${esc(p.name)}`, () => { App.undoLog(l.id); if (fromDetail) App.detail(pid); }));
+  },
+  levelHint(k) { const el = $(`#${k === 'friend' ? 'f-tier' : 'f-interest'}-hint`); if (el) el.textContent = LEVELS[k][pickedLevel(k)].hint; },
   addSheet() {
     const d = view === 'calendar' && calWeek !== weekStart(today()) ? calWeek : today();
     const item = (fn, title, sub) => `<button onclick="App.close();${fn}"><b>${title}</b><span>${sub}</span></button>`;
@@ -1760,7 +1780,7 @@ const App = {
     const bm = $('#f-bmonth').value, bd = Math.round(+$('#f-bday').value);
     const data = {
       name, kind,
-      tier: +$('#f-tier').value, interest: +$('#f-interest').value,
+      tier: pickedLevel('friend'), interest: pickedLevel('acq'),
       metAt: $('#f-metAt').value.trim(), metDate: $('#f-metDate').value || null,
       interests: $('#f-interests').value.trim(), notes: $('#f-notes').value.trim(),
       textEvery: +$('#f-textEvery').value || null, hangEvery: +$('#f-hangEvery').value || null,
@@ -1785,7 +1805,7 @@ const App = {
     if (!list.length) { $('#b-names').focus(); return; }
     const kind = document.querySelector('input[name=f-kind]:checked').value;
     const base = {
-      kind, tier: +$('#f-tier').value, interest: +$('#f-interest').value, remote: $('#b-remote').checked, location: '',
+      kind, tier: pickedLevel('friend'), interest: pickedLevel('acq'), remote: $('#b-remote').checked, location: '',
       groups: gtagValue(), metAt: '', metDate: null, interests: '', notes: '', textEvery: null, hangEvery: null, birthday: null,
     };
     const seed = { text: seedFrom($('#f-seedText').value), hang: seedFrom($('#f-seedHang').value) };
@@ -1804,15 +1824,16 @@ const App = {
   },
   typeToggle() {
     const t = document.querySelector('input[name=l-type]:checked')?.value;
-    $('#l-hours-wrap').style.visibility = t === 'hangout' ? 'visible' : 'hidden';
+    $('#l-hours-wrap').style.display = t === 'hangout' ? '' : 'none';
   },
   saveLog() {
     const pid = combo.ids[0];
     if (!pid || !person(pid)) { $('#combo-box').classList.add('invalid'); $('#combo-input').focus(); return; }
     const type = document.querySelector('input[name=l-type]:checked').value;
-    const by = document.querySelector('input[name=l-by]:checked')?.value || 'me';
+    const by = $('#l-them').checked ? 'them' : 'me';
     const p = person(pid), before = stats(p).hours;
-    const l = addLog(pid, type, $('#l-date').value || today(), $('#l-hours').value, $('#l-note').value, null, by);
+    const hours = +(document.querySelector('input[name=l-hours]:checked')?.value || 2);
+    const l = addLog(pid, type, $('#l-date').value || today(), hours, $('#l-note').value, null, by);
     const fu = $('#l-fu').value.trim();
     if (fu) p.followUps.push({ id: uid(), text: fu, date: $('#l-fu-date').value || null, done: false, created: today() });
     save(); closeModal(); render();
@@ -1823,7 +1844,7 @@ const App = {
     save(); render();
     if (fromDetail) App.detail(pid);
     const p = person(pid);
-    toast(by === 'them' ? `Noted that ${esc(p.name)} reached out` : `Logged ${type} with ${esc(p.name)}`, () => { App.undoLog(l.id); if (fromDetail) App.detail(pid); });
+    toast(by === 'them' ? `Noted that ${esc(p.name)} reached out` : type === 'call' ? `Logged a call with ${esc(p.name)}` : `Checked in with ${esc(p.name)}`, () => { App.undoLog(l.id); if (fromDetail) App.detail(pid); });
   },
   undoLog(lid) { state.logs = state.logs.filter(l => l.id !== lid); save(); render(); },
   delLog(lid, pid) {
