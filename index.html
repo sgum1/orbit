@@ -1093,8 +1093,7 @@ function renderCalendar() {
   for (const d of days) {
     const evs = evsW.filter(e => e.date === d).sort((a, b) => (a.time || '99').localeCompare(b.time || '99'));
     const logs = logsW.filter(l => l.date === d && !l.eventId);
-    const inPerson = logs.filter(l => l.type !== 'text');
-    const texts = [...new Set(logs.filter(l => l.type === 'text').map(l => person(l.personId).name))];
+    const inPerson = logs.filter(l => l.type === 'hangout');   // calendar shows plans and time in person only
     const bdays = activePeople().filter(p => p.birthday && bdayIn(+d.slice(0, 4), p.birthday) === d);
     h += `<div class="day ${d === t ? 'today' : ''} ${d < t ? 'past' : ''}">
       <div class="day-head"><span class="day-name">${wd(d)}</span><span class="day-num">${parseD(d).getDate()}</span></div>
@@ -1102,8 +1101,7 @@ function renderCalendar() {
       ${bdays.map(p => `<button class="ev bday" onclick="App.detail('${p.id}')"><span class="t">Birthday</span><b>${esc(p.name)}</b></button>`).join('')}
       ${evs.map(e => `<button class="ev ${e.done ? 'done' : e.date < t ? 'confirm' : ''}" onclick="App.eventForm('${e.id}')">
         <span class="t">${e.time ? fmtTime(e.time) : 'Any time'}${seriesOf(e)?.repeat ? ' · repeats' : ''}</span><b>${esc(e.title)}</b>${e.personIds.length ? `<span class="who">${esc(names(e.personIds).join(', '))}</span>` : ''}</button>`).join('')}
-      ${inPerson.map(l => `<button class="ev log" onclick="App.detail('${l.personId}')"><span class="t">${l.type === 'call' ? 'Call' : 'In person'}${+l.hours ? ' · ' + fmtH(+l.hours) : ''}</span><b>${esc(person(l.personId).name)}</b></button>`).join('')}
-      ${texts.length ? `<div class="day-texts">Texted ${esc(texts.join(', '))}</div>` : ''}
+      ${inPerson.map(l => `<button class="ev log" onclick="App.detail('${l.personId}')"><span class="t">In person${+l.hours ? ' · ' + fmtH(+l.hours) : ''}</span><b>${esc(person(l.personId).name)}</b>${l.note ? `<span class="who">${esc(l.note)}</span>` : ''}</button>`).join('')}
       <button class="day-add" onclick="App.eventForm(null,{date:'${d}'})">+ Add</button>
       </div>
     </div>`;
@@ -1111,8 +1109,7 @@ function renderCalendar() {
   h += `</div>`;
   const hrs = logsW.filter(l => l.type === 'hangout').reduce((s, l) => s + (+l.hours || 0), 0);
   const seen = new Set(logsW.filter(l => l.type === 'hangout').map(l => l.personId)).size;
-  const msgs = logsW.filter(l => l.type !== 'hangout').length;
-  h += `<div class="cal-sum"><span><b>${evsW.length}</b> ${evsW.length === 1 ? 'activity' : 'activities'}</span><span><b>${people(seen)}</b> seen in person</span><span><b>${fmtH(hrs)}</b> together</span><span><b>${msgs}</b> texts and calls</span></div>`;
+  h += `<div class="cal-sum"><span><b>${evsW.length}</b> ${evsW.length === 1 ? 'activity' : 'activities'}</span><span><b>${people(seen)}</b> seen in person</span><span><b>${fmtH(hrs)}</b> together</span></div>`;
   return h;
 }
 
