@@ -1,0 +1,1787 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Orbit</title>
+<meta name="description" content="Keep up with your people.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Orbit">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#f7f7f5" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121212" media="(prefers-color-scheme: dark)">
+<meta name="format-detection" content="telephone=no">
+<style>
+:root{
+  --bg:#f7f7f5; --surface:#ffffff; --ink:#1a1a1a; --ink-2:#45454b; --muted:#7c7c82; --faint:#b4b4b9;
+  --line:#e7e7e3; --hover:#f2f2ef;
+  --accent:#1a1a1a; --accent-ink:#ffffff;
+  --acq:#557767; --acq-soft:#edf3ef;
+  --overdue:#b5543d; --due:#a67a2c; --soon:#6c707b; --good:#5d8869;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+  --sans:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#121212; --surface:#191919; --ink:#ececec; --ink-2:#c6c6ca; --muted:#8e8e94; --faint:#55555a;
+    --line:#282828; --hover:#1f1f1f;
+    --accent:#ececec; --accent-ink:#121212;
+    --acq:#8fb39e; --acq-soft:#1b2520;
+    --overdue:#dc8d77; --due:#d2ae67; --soon:#a3a6b0; --good:#90c09b;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
+body{font:15px/1.55 var(--sans);background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+a{color:inherit}
+button{font:inherit;color:inherit}
+.wrap{max-width:960px;margin:0 auto;padding:0 24px}
+
+/* header */
+header{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top)}
+.top{display:flex;align-items:center;gap:24px;height:64px}
+.logo{font-family:var(--serif);font-size:21px;letter-spacing:-.01em;display:flex;align-items:center;gap:10px;cursor:pointer;background:none;border:0;padding:0}
+.mark{width:15px;height:15px;border:1.5px solid var(--ink);border-radius:50%;position:relative;display:inline-block}
+.mark:after{content:"";position:absolute;width:5px;height:5px;border-radius:50%;background:var(--acq);top:-3px;right:-3px}
+nav{display:flex;gap:22px;margin-left:auto}
+nav button{background:none;border:0;padding:6px 0;font-size:14px;color:var(--muted);cursor:pointer;border-bottom:1px solid transparent;white-space:nowrap}
+nav button:hover{color:var(--ink)}
+nav button.on{color:var(--ink);border-bottom-color:var(--ink)}
+nav .n{font-size:11px;color:var(--overdue);margin-left:5px;font-variant-numeric:tabular-nums}
+
+main{padding:48px 0 120px}
+
+/* type */
+.eyebrow{font-size:11.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:600}
+h1{font-family:var(--serif);font-weight:400;font-size:36px;line-height:1.15;letter-spacing:-.015em;margin:6px 0 8px}
+.lede{color:var(--muted);margin:0;max-width:580px}
+.muted{color:var(--muted)} .small{font-size:13px}
+.section{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin:52px 0 16px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.section .eyebrow span{color:var(--faint);margin-left:8px;font-weight:500}
+.section-note{font-size:12.5px;color:var(--muted);text-align:right}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;height:34px;padding:0 14px;border-radius:8px;border:1px solid var(--line);background:var(--surface);font-size:13.5px;font-weight:500;cursor:pointer;white-space:nowrap;transition:border-color .15s,background .15s}
+.btn:hover{border-color:var(--faint)}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn-primary:hover{opacity:.88;border-color:var(--accent)}
+.btn-quiet{background:transparent;border-color:transparent;color:var(--muted);padding:0 8px}
+.btn-quiet:hover{color:var(--ink);border-color:transparent;background:var(--hover)}
+.btn-danger{color:var(--overdue)}
+.btn-sm{height:30px;padding:0 11px;font-size:13px}
+.btn-icon{width:34px;padding:0;font-size:16px}
+.linkish{background:none;border:0;padding:0;color:var(--ink);text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--faint);cursor:pointer;font-size:inherit}
+.linkish:hover{text-decoration-color:var(--ink)}
+.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:24px}
+
+/* tags & status */
+.tag{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:500;padding:2px 9px;border-radius:999px;white-space:nowrap;line-height:1.6}
+.tag-acq{color:var(--acq);background:var(--acq-soft)}
+.tag-acq:before{content:"";width:5px;height:5px;border-radius:50%;border:1.5px solid currentColor}
+.tag-grew{color:var(--acq);border:1px dashed var(--acq);padding:1px 8px}
+.tag-ld{color:var(--muted);border:1px solid var(--line);padding:1px 8px}
+.status{font-size:12.5px;font-weight:500;display:inline-flex;align-items:center;gap:7px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.status:before,.dot{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;flex:none;display:inline-block}
+.s-overdue{color:var(--overdue)} .s-due{color:var(--due)} .s-soon{color:var(--soon)} .s-good{color:var(--good)} .s-plan{color:var(--ink)}
+.s-plan:before{background:transparent;border:1.5px solid currentColor;width:5px;height:5px}
+
+/* week summary */
+.week-progress{display:flex;align-items:center;gap:14px;margin-top:22px;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.week-progress .bar{flex:1;max-width:280px}
+
+/* cards */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px 22px;display:flex;flex-direction:column;transition:opacity .2s}
+.card.is-done{opacity:.5}
+.card.is-done:hover{opacity:.8}
+.card-top{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.name{font-size:16px;font-weight:600;letter-spacing:-.005em;background:none;border:0;padding:0;cursor:pointer;text-align:left}
+.name:hover{text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--faint)}
+.meta{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin-top:5px}
+.idea{font-size:13.5px;color:var(--ink-2);margin:16px 0 0;padding-top:14px;border-top:1px solid var(--line)}
+.note{font-size:13px;color:var(--muted);margin:8px 0 0}
+.note b{font-weight:500;color:var(--ink-2)}
+.actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:18px}
+.card .actions{margin-top:auto;padding-top:18px}
+
+/* rows */
+.rows{border-top:1px solid var(--line)}
+.row{display:grid;grid-template-columns:6px 1fr 120px 120px;gap:18px;align-items:center;padding:15px 10px;border-bottom:1px solid var(--line);cursor:pointer;transition:background .12s}
+.row:hover{background:var(--hover)}
+.row.simple{grid-template-columns:6px 1fr auto}
+.row.plan{grid-template-columns:88px 1fr auto}
+.row-main{min-width:0}
+.row .name{font-size:15px}
+.cell{display:flex;flex-direction:column;font-size:13px;font-variant-numeric:tabular-nums}
+.cell-label{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);font-weight:600}
+.right{text-align:right;align-items:flex-end}
+.when-col{font-size:13px;font-variant-numeric:tabular-nums}
+.when-col b{display:block;font-weight:600}
+.when-col span{color:var(--muted)}
+
+/* banner */
+.banner{margin-top:32px;border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:6px 20px}
+.banner-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);font-size:14px}
+.banner-row:last-child{border-bottom:0}
+.banner-row .grow{flex:1;min-width:0}
+
+/* calendar */
+.cal-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.cal-nav{display:flex;gap:6px;align-items:center}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--surface);margin-top:28px}
+.day{min-height:340px;padding:12px 9px 10px;border-left:1px solid var(--line);display:flex;flex-direction:column;gap:6px;min-width:0}
+.day:first-child{border-left:0}
+.day.past{background:color-mix(in srgb,var(--bg) 55%,var(--surface))}
+.day-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;padding:0 3px}
+.day-name{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.day-num{font-family:var(--serif);font-size:20px;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%}
+.day.today .day-num{background:var(--ink);color:var(--bg);font-size:16px}
+.ev{display:block;width:100%;text-align:left;background:var(--hover);border:1px solid transparent;border-radius:8px;padding:7px 8px;cursor:pointer;font-size:12.5px;line-height:1.35;overflow:hidden}
+.ev:hover{border-color:var(--faint)}
+.ev .t{font-size:11px;color:var(--muted);display:block;font-variant-numeric:tabular-nums}
+.ev b{font-weight:600;display:block;overflow:hidden;text-overflow:ellipsis}
+.ev .who{color:var(--muted);display:block;overflow:hidden;text-overflow:ellipsis}
+.ev.done{background:var(--acq-soft)}
+.ev.done .t:after{content:" · done";color:var(--acq)}
+.ev.confirm{background:transparent;border:1px dashed var(--faint)}
+.ev.confirm .t:after{content:" · confirm";color:var(--due)}
+.ev.log{background:transparent;border:1px solid var(--line)}
+.day-texts{font-size:11.5px;color:var(--muted);padding:2px 3px;line-height:1.4}
+.day-add{margin-top:auto;background:none;border:1px dashed transparent;border-radius:8px;color:var(--faint);font-size:12.5px;padding:6px;cursor:pointer}
+.day:hover .day-add{border-color:var(--line);color:var(--muted)}
+.day-add:hover{color:var(--ink)!important;border-color:var(--faint)!important}
+.cal-sum{display:flex;gap:28px;flex-wrap:wrap;margin-top:18px;font-size:13px;color:var(--muted)}
+.cal-sum b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+
+/* controls */
+input,select,textarea{font:inherit;font-size:14px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 11px;width:100%;transition:border-color .15s}
+input,select{height:38px}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
+textarea{min-height:78px;resize:vertical}
+.search{max-width:260px}
+.seg-tabs{display:inline-flex;border:1px solid var(--line);border-radius:9px;padding:3px;background:var(--surface)}
+.seg-tabs button{background:none;border:0;font-size:13px;padding:5px 12px;border-radius:6px;color:var(--muted);cursor:pointer}
+.seg-tabs button.on{background:var(--hover);color:var(--ink)}
+select.inline{width:auto}
+.picker{display:flex;flex-wrap:wrap;gap:6px;max-height:180px;overflow:auto;padding:2px 0}
+.pick{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:13px;cursor:pointer;user-select:none;transition:all .12s}
+.pick:hover{border-color:var(--faint)}
+.pick input{position:absolute;opacity:0;pointer-events:none}
+.pick:has(input:checked){background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.pick.acq{color:var(--acq)}
+.pick.acq:has(input:checked){background:var(--acq);border-color:var(--acq);color:#fff}
+.check{display:flex;gap:10px;align-items:flex-start;font-size:14px;cursor:pointer;margin-top:18px}
+.check input{width:16px;height:16px;margin:2px 0 0;accent-color:var(--ink)}
+.check small{display:block;color:var(--muted);font-size:12.5px}
+
+/* progress */
+.bar{height:3px;background:var(--line);border-radius:3px;overflow:hidden}
+.bar span{display:block;height:100%;background:var(--acq);border-radius:3px}
+.bar.ink span{background:var(--ink)}
+
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(5,1fr);border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-top:32px}
+.stat{padding:20px 16px 20px 0}
+.stat + .stat{padding-left:18px;border-left:1px solid var(--line)}
+.stat b{display:block;font-family:var(--serif);font-weight:400;font-size:32px;letter-spacing:-.02em;line-height:1.1}
+.stat span{font-size:12.5px;color:var(--muted)}
+
+/* tables */
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:13px 8px 13px 0;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+th{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);font-weight:600}
+td input{width:84px}
+td .hint{display:block;font-size:12.5px;color:var(--muted);font-weight:400}
+
+/* empty */
+.empty{text-align:center;padding:72px 20px}
+.empty .lede{margin:0 auto}
+.empty .actions{justify-content:center;margin-top:28px}
+.orbit{width:70px;height:70px;border:1px solid var(--faint);border-radius:50%;margin:0 auto 28px;position:relative}
+.orbit:before{content:"";position:absolute;inset:22px;border-radius:50%;background:var(--ink)}
+.orbit:after{content:"";position:absolute;width:9px;height:9px;border-radius:50%;background:var(--acq);top:6px;right:6px}
+.quiet-box{border:1px dashed var(--line);border-radius:14px;padding:36px;text-align:center;color:var(--muted)}
+.quiet-box h3{font-family:var(--serif);font-weight:400;font-size:22px;color:var(--ink);margin:0 0 4px}
+
+/* modal */
+.backdrop{position:fixed;inset:0;background:rgba(18,18,18,.32);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);display:flex;align-items:flex-start;justify-content:center;padding:7vh 16px;z-index:20;overflow:auto;animation:fade .15s ease}
+.modal{background:var(--surface);border:1px solid var(--line);border-radius:16px;width:100%;max-width:540px;padding:30px 32px;box-shadow:0 24px 70px rgba(0,0,0,.18);animation:rise .18s ease}
+@keyframes fade{from{opacity:0}} @keyframes rise{from{opacity:0;transform:translateY(6px)}}
+.modal h2{font-family:var(--serif);font-weight:400;font-size:26px;letter-spacing:-.01em;margin:0}
+.modal .sub{color:var(--muted);font-size:13.5px;margin:6px 0 0}
+.field{display:flex;flex-direction:column;gap:6px;margin-top:18px}
+.field > label,.label{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.field .hint{font-size:12.5px;color:var(--muted)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.three{display:grid;grid-template-columns:1.3fr 1fr .8fr;gap:12px}
+.choice{display:flex;gap:8px}
+.choice label{flex:1;border:1px solid var(--line);border-radius:10px;padding:11px 13px;cursor:pointer;font-size:14px;display:flex;flex-direction:column;gap:2px;transition:border-color .15s}
+.choice label:hover{border-color:var(--faint)}
+.choice input{position:absolute;opacity:0;pointer-events:none}
+.choice label:has(input:checked){border-color:var(--ink)}
+.choice label.acq:has(input:checked){border-color:var(--acq);background:var(--acq-soft)}
+.choice small{color:var(--muted);font-size:12.5px}
+.foot{display:flex;gap:8px;justify-content:flex-end;align-items:center;margin-top:28px;flex-wrap:wrap}
+.foot .left{margin-right:auto}
+details summary{font-size:13px;color:var(--muted);cursor:pointer;margin-top:20px;list-style:none}
+details summary::-webkit-details-marker{display:none}
+details summary:before{content:"+ "}
+details[open] summary:before{content:"– "}
+.facts{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--line);margin-top:22px}
+.facts div{padding:12px 0;border-bottom:1px solid var(--line);font-size:14px}
+.facts div:nth-child(odd){padding-right:14px}
+.facts div:nth-child(even){padding-left:14px;border-left:1px solid var(--line)}
+.facts small{display:block;font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);font-weight:600;margin-bottom:2px}
+.panel{margin-top:22px;padding:16px 18px;border-radius:12px;background:var(--acq-soft)}
+.panel.plain{background:var(--hover)}
+.panel-top{display:flex;justify-content:space-between;font-size:13px;margin-bottom:10px;gap:10px}
+.panel p{font-size:13px;margin:10px 0 0;color:var(--ink-2)}
+.history{margin-top:8px}
+.log{display:grid;grid-template-columns:70px 1fr 20px;gap:12px;padding:11px 0;border-bottom:1px solid var(--line);font-size:14px}
+.log:last-child{border-bottom:0}
+.log .when{color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+.log .x{background:none;border:0;color:var(--faint);cursor:pointer;font-size:17px;line-height:1;padding:0}
+.log .x:hover{color:var(--overdue)}
+.log.click{cursor:pointer}
+.notes-block{font-size:13.5px;color:var(--ink-2);margin-top:16px;white-space:pre-wrap}
+.notes-block .label{display:block;margin-bottom:3px}
+
+/* toast */
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:11px 20px;border-radius:999px;display:flex;gap:16px;align-items:center;z-index:30;font-size:13.5px;box-shadow:0 10px 30px rgba(0,0,0,.18);animation:rise .18s ease;white-space:nowrap;max-width:92vw}
+.toast span{overflow:hidden;text-overflow:ellipsis}
+.toast button{background:none;border:0;color:inherit;font-weight:600;text-decoration:underline;text-underline-offset:3px;cursor:pointer;padding:0}
+
+/* research */
+.entries{border-top:1px solid var(--line);margin-top:36px}
+.entry{display:grid;grid-template-columns:56px 1fr;gap:8px;padding:30px 0;border-bottom:1px solid var(--line)}
+.entry .num{font-family:var(--serif);color:var(--faint);font-size:18px}
+.entry h3{font-family:var(--serif);font-weight:400;font-size:22px;letter-spacing:-.01em;margin:0 0 8px}
+.entry p{margin:0 0 10px;color:var(--ink-2);max-width:640px}
+.entry .use{font-size:13.5px;color:var(--ink);border-left:2px solid var(--acq);padding-left:12px;margin:14px 0 12px}
+.entry .cite{font-size:12.5px;color:var(--muted)}
+
+@media (max-width:820px){
+  .cal{grid-template-columns:1fr}
+  .day{border-left:0;border-top:1px solid var(--line);min-height:0}
+  .day:first-child{border-top:0}
+  .day-head{justify-content:flex-start;gap:10px}
+  .day-add{margin-top:4px;border-color:var(--line);color:var(--muted)}
+}
+@media (max-width:640px){
+  .wrap{padding:0 18px}
+  .top{height:52px}
+  #nav{display:none}
+  .tabbar{display:flex}
+  main{padding-top:28px;padding-bottom:calc(120px + env(safe-area-inset-bottom))}
+  h1{font-size:30px}
+  .cards{grid-template-columns:1fr}
+  .row{grid-template-columns:6px 1fr;row-gap:6px}
+  .row .cell{grid-column:2;flex-direction:row;gap:8px}
+  .row.plan{grid-template-columns:70px 1fr}
+  .stats{grid-template-columns:1fr 1fr}
+  .stat + .stat{border-left:0;padding-left:0}
+  .two,.three{grid-template-columns:1fr}
+  .backdrop{align-items:flex-end;padding:0;padding-top:max(24px, env(safe-area-inset-top))}
+  .modal{max-width:none;border-radius:18px 18px 0 0;border-bottom:0;max-height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:24px 20px calc(24px + env(safe-area-inset-bottom));animation:sheet .22s ease}
+  .modal:before{content:"";display:block;width:36px;height:4px;border-radius:2px;background:var(--line);margin:-10px auto 16px}
+  input,select,textarea{font-size:16px}
+  input,select{height:44px}
+  .btn{height:42px;padding:0 15px;font-size:14.5px}
+  .btn-sm{height:38px;padding:0 13px;font-size:14px}
+  .btn-icon{width:42px}
+  .tick{width:24px;height:24px}
+  .row.task{grid-template-columns:24px 1fr}
+  .log.fu{grid-template-columns:24px 1fr 24px}
+  .log .x{font-size:22px}
+  .toast{bottom:calc(84px + env(safe-area-inset-bottom));white-space:normal;border-radius:16px;width:calc(100vw - 32px);justify-content:space-between}
+  .card{padding:18px}
+  .card .actions .btn{flex:1 1 auto}
+  .toolbar .btn{flex:1 1 auto}
+  .search{max-width:none;flex:1 1 100%}
+  .day-add{padding:10px}
+  .ev{padding:10px}
+  .another{font-size:13px;display:inline-block;margin:6px 0 0}
+  .entry{grid-template-columns:1fr}
+}
+
+/* phone tab bar */
+.tabbar{display:none;position:fixed;left:0;right:0;bottom:0;z-index:10;background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
+.tabbar button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:0;color:var(--faint);font-size:10.5px;font-weight:500;letter-spacing:.01em;padding:5px 0 2px;cursor:pointer;position:relative}
+.tabbar button.on{color:var(--ink)}
+.tabbar svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.tabbar .n{position:absolute;top:1px;left:calc(50% + 7px);background:var(--overdue);color:#fff;font-size:10px;font-weight:700;border-radius:8px;min-width:16px;padding:0 4px;line-height:16px;text-align:center}
+@keyframes sheet{from{opacity:.4;transform:translateY(40px)}}
+.share-glyph{display:inline-block;width:13px;height:15px;vertical-align:-2px;margin:0 2px}
+.share-glyph svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+/* v4 additions */
+.bar2{height:3px;background:var(--line);border-radius:3px;overflow:hidden;display:flex;flex:1;max-width:280px}
+.bar2 .d{background:var(--ink)} .bar2 .p{background:var(--faint)}
+.row.task{grid-template-columns:18px 1fr auto}
+.tick{width:18px;height:18px;border-radius:50%;border:1.5px solid var(--faint);background:none;cursor:pointer;flex:none;padding:0;transition:all .12s}
+.tick:hover{border-color:var(--good);background:var(--good)}
+.ring{width:18px;height:18px;border-radius:50%;border:1.5px dashed var(--due)}
+.ev.bday{background:transparent;border:1px dashed var(--due)}
+.ev.bday b{font-weight:500}
+.group-links{font-size:12.5px;color:var(--muted);margin-bottom:6px}
+.group-links .linkish{margin-left:8px;font-size:12.5px}
+.inline-add{display:grid;grid-template-columns:1fr 150px auto;gap:8px;margin-top:10px}
+.inline-add input{height:34px}
+.another{background:none;border:0;padding:0;margin-left:6px;font-size:12px;color:var(--faint);cursor:pointer;text-decoration:underline;text-underline-offset:3px;white-space:nowrap}
+.another:hover{color:var(--ink)}
+.log.fu{grid-template-columns:18px 1fr 20px;align-items:center}
+.bday-fields{display:grid;grid-template-columns:1.3fr 1fr;gap:8px}
+.facts div:last-child:nth-child(odd){border-right:0}
+[role=button]:focus-visible,button:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radius:6px}
+@media (max-width:640px){ .inline-add{grid-template-columns:1fr} .row.task{grid-template-columns:18px 1fr} .row.task .cell{grid-column:2} }
+</style>
+</head>
+<body>
+<header><div class="wrap top">
+  <button class="logo" onclick="App.go('week')"><span class="mark"></span>Orbit</button>
+  <nav id="nav"></nav>
+</div></header>
+<main class="wrap" id="main"></main>
+<nav class="tabbar" id="tabbar" aria-label="Sections"></nav>
+<div id="modal-root"></div>
+<div id="toast-root"></div>
+
+<script>
+/* Orbit: a research-informed friendship tracker.
+   All data stays on the device, in this browser or the installed Home Screen app (localStorage).
+   Nothing is ever sent to a server. Settings > Export to back up.
+   Internally, in-person interactions use the type key 'hangout'. */
+
+const KEY = 'orbit.v1';
+
+// Default cadences in days. Based on Dunbar's layers and friendship decay research,
+// tuned for early/mid-20s. Editable in Settings and per person.
+const LEVELS = {
+  friend: {
+    1: { label: 'Inner circle',  hint: `Your ~5 people. Who you'd call in a crisis.`, cap: 5,   text: 3,  hang: 10 },
+    2: { label: 'Close friend',  hint: 'The next ~10 (about 15 total).',                cap: 10,  text: 7,  hang: 21 },
+    3: { label: 'Good friend',   hint: 'The next ~35 (about 50 total).',                cap: 35,  text: 14, hang: 45 },
+    4: { label: 'Casual friend', hint: 'The rest of your ~150.',                        cap: 100, text: 30, hang: 90 },
+  },
+  acq: {
+    1: { label: 'High interest',   hint: 'I really want this to become a friendship.', text: 5,  hang: 10 },
+    2: { label: 'Medium interest', hint: `I'd like to get to know them more.`,         text: 10, hang: 21 },
+    3: { label: 'Low interest',    hint: 'Keep the door open, no pressure.',           text: 21, hang: 45 },
+  }
+};
+const WEIGHT = { friend: {1:1.45, 2:1.3, 3:1.12, 4:1}, acq: {1:1.38, 2:1.15, 3:1} };
+const MAX_RATIO = 3;   // stops one long-neglected person from outranking everyone closer
+// Hall (2019): approximate hours together to reach each level.
+const MILESTONES = [ {h:50, label:'Casual friend'}, {h:90, label:'Friend'}, {h:200, label:'Close friend'} ];
+const TYPE_LABEL = { text: 'Text', call: 'Call', hangout: 'In person' };
+const REPEAT_LABEL = { '': 'Does not repeat', weekly: 'Every week', biweekly: 'Every 2 weeks', monthly: 'Every month' };
+const APPROX = [['', 'Not sure'], ['3', 'This week'], ['14', 'A couple of weeks ago'], ['30', 'About a month ago'], ['75', '2 to 3 months ago'], ['180', 'About 6 months ago'], ['365', 'A year or more']];
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+const IDEAS = {
+  friendText: [
+    'Send something that reminded you of them: a song, a post, an article.',
+    `Ask a specific question about their week. Specific beats "wyd".`,
+    'Share a small win or a funny moment from your day.',
+    'Bring up an inside joke or a memory you share.',
+    'Check in on something going on in their life (work, family, a trip).',
+    `Tell them something you appreciate about them. It lands better than you'd think.`,
+    'Float a low-effort plan: coffee, a walk, the gym.',
+  ],
+  acqText: [
+    'Follow up on something they mentioned when you met. It shows you listened.',
+    'Send something related to what you talked about. Easy, no pressure.',
+    `Invite them to something you're already doing, like a group dinner or a run club.`,
+    'Ask for a recommendation in something they know about.',
+    'Keep it light and specific. They probably liked you more than you think.',
+  ],
+  remoteText: [
+    'Set up a call or FaceTime. Hearing their voice feels a lot closer than text.',
+    'Send something that reminded you of them, and ask what their weekends look like now.',
+    'Ask about the people and places in their life there. Keep up with the details.',
+    `Share something about your new place, then ask what you're missing back home.`,
+    'Float a visit, even a loose one. Something on the calendar keeps it real.',
+    'Watch or play something together online, or start a show at the same time.',
+    'Send a voice memo instead of a text. It feels more personal.',
+  ],
+  friendHang: [
+    'Try something new together. New experiences build closeness.',
+    'Set up a recurring plan so you stop having to reschedule.',
+    'Cook or get food together. Long, unhurried time makes for the best conversations.',
+    'Run errands or work out together. Ordinary time counts too.',
+    'Plan a day trip or a show, something to look forward to.',
+  ],
+  acqHang: [
+    'Keep it low-pressure and activity-based: coffee, a walk, climbing, trivia.',
+    'Invite them along to a group plan. An easier yes, and more hours together.',
+    'Suggest something recurring. Seeing someone regularly builds liking.',
+    'Go a little deeper than last time. Opening up gradually, on both sides, builds closeness.',
+    'Time together in the first few months matters most. Prioritise this one.',
+  ],
+};
+
+/* utils */
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+const pad = n => String(n).padStart(2, '0');
+const fmt = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const today = () => fmt(new Date());
+const parseD = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+const addDays = (s, n) => { const d = parseD(s); d.setDate(d.getDate() + n); return fmt(d); };
+const diffDays = (a, b) => Math.round((parseD(b) - parseD(a)) / 864e5);
+const since = s => diffDays(s, today());
+const hash = s => { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) | 0; return Math.abs(h); };
+const pick = (arr, seed) => arr[hash(seed) % arr.length];
+const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+const people = n => n === 1 ? '1 person' : `${n} people`;
+const fmtH = h => `${Math.round(h * 10) / 10}h`;
+const weekStart = s => addDays(s, -((parseD(s).getDay() + 6) % 7));   // Monday
+const wd = s => parseD(s).toLocaleDateString(undefined, { weekday: 'short' });
+const maxDate = arr => arr.filter(Boolean).reduce((m, x) => (!m || x > m ? x : m), null);
+const byDate = (a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || ''));
+const RB = 'tabindex="0" role="button"';
+const isStandalone = () => window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone === true;
+const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent || '') || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isHosted = () => /^https?:$/.test(location.protocol);
+let installPrompt = null;   // Android/Chrome install event
+const SHARE_SVG = '<span class="share-glyph"><svg viewBox="0 0 14 16"><path d="M7 1v9M3.8 4.2 7 1l3.2 3.2M4.5 7H2.5v8h9V7h-2"/></svg></span>';
+const TAB_ICONS = {
+  week: '<path d="M9 6.5h11M9 12h11M9 17.5h11"/><path d="M3.5 6.5l1.3 1.3L7.2 5.4M3.5 12l1.3 1.3 2.4-2.4M3.5 17.5l1.3 1.3 2.4-2.4"/>',
+  calendar: '<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+  people: '<circle cx="9" cy="8.5" r="3.2"/><path d="M3.5 19.5c.8-3.3 3-5.2 5.5-5.2s4.7 1.9 5.5 5.2"/><circle cx="16.8" cy="9.6" r="2.5"/><path d="M15.8 14.4c2.3.2 4 1.8 4.8 4.9"/>',
+  insights: '<path d="M5 20v-7M10 20V5.5M15 20v-9.5M20 20V8.5"/>',
+  settings: '<path d="M4 7h9.5M18.5 7H20M4 17h3.5M12.5 17H20"/><circle cx="16" cy="7" r="2.3"/><circle cx="10" cy="17" r="2.3"/>',
+};
+function ago(n) {
+  if (n == null) return 'never';
+  if (n < 0) return 'upcoming';
+  if (n === 0) return 'today';
+  if (n === 1) return 'yesterday';
+  if (n < 14) return `${n} days ago`;
+  if (n < 60) return `${Math.round(n / 7)} weeks ago`;
+  if (n < 365) return `${Math.round(n / 30)} months ago`;
+  return `${(n / 365).toFixed(1)} years ago`;
+}
+function nice(s) {
+  const opt = { month: 'short', day: 'numeric' };
+  if (s.slice(0, 4) !== today().slice(0, 4)) opt.year = 'numeric';
+  return parseD(s).toLocaleDateString(undefined, opt);
+}
+function rangeLabel(ws) {
+  const a = parseD(ws), b = parseD(addDays(ws, 6));
+  const m = d => d.toLocaleDateString(undefined, { month: 'short' });
+  return a.getMonth() === b.getMonth() ? `${m(a)} ${a.getDate()} – ${b.getDate()}` : `${m(a)} ${a.getDate()} – ${m(b)} ${b.getDate()}`;
+}
+function fmtTime(t) {
+  if (!t) return '';
+  const [h, m] = t.split(':').map(Number);
+  return `${((h + 11) % 12) + 1}${m ? ':' + pad(m) : ''}${h < 12 ? 'am' : 'pm'}`;
+}
+function dueIn(rem) {
+  if (rem < 0) return `${-rem}d overdue`;
+  if (rem === 0) return 'Due today';
+  return `In ${rem}d`;
+}
+function relDay(d) {
+  const n = diffDays(today(), d);
+  if (n === 0) return 'Today';
+  if (n === 1) return 'Tomorrow';
+  if (n === -1) return 'Yesterday';
+  if (n < 0) return `Was ${wd(d)}`;
+  return n < 7 ? wd(d) : `${wd(d)} ${nice(d)}`;
+}
+// Birthdays are stored as MM-DD. Feb 29 falls back to Feb 28 in non-leap years.
+function bdayIn(year, mmdd) {
+  const [m, d] = mmdd.split('-').map(Number);
+  return `${year}-${pad(m)}-${pad(Math.min(d, new Date(year, m, 0).getDate()))}`;
+}
+function nextBirthday(p, from) {
+  if (!p.birthday) return null;
+  const y = +from.slice(0, 4);
+  const d = bdayIn(y, p.birthday);
+  return d >= from ? d : bdayIn(y + 1, p.birthday);
+}
+const bdayLabel = mmdd => { const [m, d] = mmdd.split('-').map(Number); return `${MONTHS[m - 1]} ${d}`; };
+
+/* state */
+function defaultIntervals() {
+  const o = { friend: {}, acq: {} };
+  for (const k of ['friend', 'acq']) for (const l in LEVELS[k]) o[k][l] = { text: LEVELS[k][l].text, hang: LEVELS[k][l].hang };
+  return o;
+}
+function freshSettings() {
+  return { weekCaps: { hang: 5, text: 10 }, intervals: defaultIntervals(), lastBackup: null, backupSnooze: null, tierDismiss: {} };
+}
+function freshState() { return { version: 3, people: [], logs: [], events: [], series: {}, settings: freshSettings() }; }
+function load() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(KEY));
+    if (!raw || !Array.isArray(raw.people)) return freshState();
+    raw.settings = Object.assign(freshSettings(), raw.settings || {});
+    raw.settings.intervals = Object.assign(defaultIntervals(), raw.settings.intervals || {});
+    delete raw.settings.caps;
+    raw.logs = raw.logs || [];
+    raw.events = raw.events || [];
+    raw.series = raw.series || {};
+    for (const p of raw.people) { p.groups = p.groups || []; p.followUps = p.followUps || []; p.skip = p.skip || {}; }
+    for (const e of raw.events) e.personIds = e.personIds || [];
+    raw.version = 3;
+    return raw;
+  } catch { return freshState(); }
+}
+function save() { localStorage.setItem(KEY, JSON.stringify(state)); }
+
+let state = load();
+let view = 'week';
+let pf = { q: '', kind: 'all', sort: 'urgency', group: '' };
+let showAll = false;
+let calWeek = weekStart(today());
+let histAll = false;
+const ideaShift = {};
+let groupSugs = [];
+
+const person = id => state.people.find(p => p.id === id);
+const getEvent = id => state.events.find(e => e.id === id);
+const activePeople = () => state.people.filter(p => !p.archived);
+const lvl = p => p.kind === 'friend' ? p.tier : p.interest;
+const levelInfo = p => LEVELS[p.kind][lvl(p)];
+const names = ids => ids.map(person).filter(Boolean).map(p => p.name);
+const listNames = arr => arr.length <= 2 ? arr.join(' and ') : `${arr.slice(0, -1).join(', ')} and ${arr[arr.length - 1]}`;
+const allGroups = () => [...new Set(state.people.filter(p => !p.archived).flatMap(p => p.groups || []))].sort((a, b) => a.localeCompare(b));
+const openFollowUps = p => (p.followUps || []).filter(f => !f.done).sort((a, b) => (a.date || '9999').localeCompare(b.date || '9999'));
+
+function intervals(p) {
+  const d = state.settings.intervals[p.kind][lvl(p)];
+  return { text: +p.textEvery || d.text, hang: +p.hangEvery || d.hang };
+}
+function statusOf(r) { return r >= 1.5 ? 'overdue' : r >= 1 ? 'due' : r >= 0.75 ? 'soon' : 'good'; }
+const STATUS_LABEL = { overdue: 'Overdue', due: 'Due', soon: 'Soon', good: 'On track' };
+
+/* Reference dates for a person's timers, using only history before `before` (exclusive) if given.
+   Seeds are rough "last time" answers from the Add form; they start timers without creating fake history.
+   With no history at all, timers start from when you met, or from when you added them with a
+   per-person offset so a batch of new people doesn't all come due on the same day. */
+function refs(p, before) {
+  const ok = d => d && (!before || d < before);
+  const logs = state.logs.filter(l => l.personId === p.id && ok(l.date));
+  const seed = p.seed || {};
+  const lastHang = maxDate([...logs.filter(l => l.type === 'hangout').map(l => l.date), ok(seed.hang) && seed.hang]);
+  const lastAny = maxDate([...logs.map(l => l.date), ok(seed.text) && seed.text, lastHang]);
+  const iv = intervals(p);
+  const fallback = (k, n) => p.metDate || addDays(p.created, -(hash(p.id + k) % Math.max(1, Math.ceil(n * 0.6))));
+  return { lastAny, lastHang, refText: lastAny || fallback('t', iv.text), refHang: lastHang || fallback('h', iv.hang) };
+}
+
+function stats(p) {
+  const logs = state.logs.filter(l => l.personId === p.id).sort((a, b) => b.date.localeCompare(a.date) || (b.ts || 0) - (a.ts || 0));
+  const r = refs(p);
+  const hours = logs.filter(l => l.type === 'hangout').reduce((s, l) => s + (+l.hours || 0), 0);
+  const noteLog = logs.find(l => l.note && !l.eventId) || logs.find(l => l.note);
+  const iv = intervals(p);
+  const tDays = since(r.refText), hDays = since(r.refHang);
+  const ws = weekStart(today());
+  const tSkipped = p.skip?.text === ws, hSkipped = p.skip?.hang === ws;
+  const tRatio = tDays / iv.text, hRatio = hDays / iv.hang;
+  const w = WEIGHT[p.kind][lvl(p)] || 1;
+  const remote = !!p.remote;
+  const upcoming = state.events.filter(e => !e.done && e.date >= today() && e.personIds.includes(p.id)).sort(byDate);
+  return {
+    logs, lastAny: r.lastAny, lastHang: r.lastHang, hours, noteLog, iv, tDays, hDays, tRatio, hRatio, tSkipped, hSkipped, upcoming, remote,
+    textRem: iv.text - tDays, hangRem: iv.hang - hDays,
+    tScore: Math.min(tRatio, MAX_RATIO) * w, hScore: remote ? 0 : Math.min(hRatio, MAX_RATIO) * w,
+    status: !remote && upcoming.length && hRatio >= 0.75 ? 'soon' : statusOf(Math.max(tSkipped ? 0 : tRatio, hSkipped || remote ? 0 : hRatio)),
+  };
+}
+function balance(p, days = 180) {
+  const ls = state.logs.filter(l => l.personId === p.id && l.by && !l.eventId && since(l.date) <= days);
+  const me = ls.filter(l => l.by === 'me').length;
+  return { n: ls.length, me, them: ls.length - me };
+}
+
+/* Weekly plan: who to see and who to check in with in the week starting ws.
+   Built from history before the week began, so the list stays stable as you check people off. */
+function weekPlan(ws, all) {
+  const we = addDays(ws, 6), horizon = addDays(we, 7);
+  const caps = state.settings.weekCaps;
+  const see = [], text = [];
+  for (const p of activePeople()) {
+    if (p.created > we) continue;
+    const iv = intervals(p), w = WEIGHT[p.kind][lvl(p)] || 1;
+    const inWeek = state.logs.filter(l => l.personId === p.id && l.date >= ws && l.date <= we);
+    const r = refs(p, ws);
+    const hangDue = addDays(r.refHang, iv.hang), textDue = addDays(r.refText, iv.text);
+    if (!p.remote && hangDue <= we && p.skip?.hang !== ws) {
+      see.push({
+        p, due: hangDue, score: Math.min(diffDays(r.refHang, we) / iv.hang, MAX_RATIO) * w,
+        done: inWeek.filter(l => l.type === 'hangout').sort((a, b) => a.date.localeCompare(b.date))[0] || null,
+        // a plan this week or next counts as handled
+        planned: state.events.filter(e => !e.done && e.personIds.includes(p.id) && e.date >= ws && e.date <= horizon).sort(byDate)[0] || null,
+      });
+    }
+    if (textDue <= we && p.skip?.text !== ws) {
+      const times = iv.text < 7 ? Math.floor(7 / iv.text) : 1;
+      const count = new Set(inWeek.map(l => l.date)).size;   // distinct days, not messages
+      text.push({ p, due: textDue, score: Math.min(diffDays(r.refText, we) / iv.text, MAX_RATIO) * w, times, count, done: count >= times });
+    }
+  }
+  see.sort((a, b) => b.score - a.score);
+  text.sort((a, b) => b.score - a.score);
+  const seeShown = all ? see : see.slice(0, caps.hang);
+  const seeIds = new Set(seeShown.map(x => x.p.id));
+  const textPool = text.filter(x => !seeIds.has(x.p.id) || x.times > 1);
+  const textShown = all ? textPool : textPool.slice(0, caps.text);
+  const rank = x => x.done ? 2 : x.planned ? 1 : 0;
+  const order = arr => arr.map((x, i) => [x, i]).sort((a, b) => rank(a[0]) - rank(b[0]) || a[1] - b[1]).map(a => a[0]);
+  return { ws, we, see: order(seeShown), text: order(textShown), hidden: (see.length - seeShown.length) + (textPool.length - textShown.length) };
+}
+
+/* Recurring plans: each series stores a template and the last date generated.
+   Occurrences are created up to a few weeks ahead; missed past dates are skipped, never back-filled. */
+function stepDate(d, repeat, day) {
+  if (repeat === 'weekly') return addDays(d, 7);
+  if (repeat === 'biweekly') return addDays(d, 14);
+  if (repeat === 'monthly') {
+    const x = parseD(d), y = x.getFullYear(), m = x.getMonth() + 1;
+    const last = new Date(y, m + 1, 0).getDate();
+    return fmt(new Date(y, m, Math.min(day || x.getDate(), last)));
+  }
+  return null;
+}
+function materialize(until) {
+  let changed = false;
+  const t = today();
+  for (const [sid, sr] of Object.entries(state.series)) {
+    if (!sr.repeat) continue;
+    let next = stepDate(sr.lastGen, sr.repeat, sr.day), guard = 0;
+    while (next && next <= until && guard++ < 500) {
+      if (next >= t) state.events.push({ id: uid(), ...sr.tpl, personIds: [...sr.tpl.personIds], date: next, done: false, seriesId: sid });
+      sr.lastGen = next; changed = true;
+      next = stepDate(next, sr.repeat, sr.day);
+    }
+  }
+  if (changed) save();
+}
+const tplOf = e => ({ title: e.title, time: e.time, hours: e.hours, personIds: [...e.personIds], location: e.location, note: e.note });
+const seriesOf = e => e.seriesId ? state.series[e.seriesId] : null;
+
+/* Tier check: suggest moving people closer or looser so the plan matches reality. */
+function tierChecks() {
+  const out = [], dis = state.settings.tierDismiss || {};
+  for (const p of activePeople()) {
+    if (dis[p.id] && since(dis[p.id]) < 60) continue;
+    const s = stats(p);
+    const recent = s.logs.filter(l => since(l.date) <= 60);
+    if (p.kind === 'friend' && p.tier > 1) {
+      const closer = state.settings.intervals.friend[p.tier - 1];
+      const n = p.remote ? new Set(recent.map(l => l.date)).size : recent.filter(l => l.type === 'hangout').length;
+      const expected = 60 / (p.remote ? closer.text : closer.hang);
+      if (n >= Math.max(p.remote ? 5 : 3, expected * 0.8)) {
+        out.push({ p, action: 'up', to: p.tier - 1, why: p.remote ? `In touch on ${n} different days in the last 2 months` : `Seen ${n} times in the last 2 months` });
+        continue;
+      }
+    }
+    const established = since(p.created) > 2 * s.iv.text;
+    const neglected = s.tRatio >= 3 && (p.remote || s.hRatio >= 3);
+    if (p.kind === 'friend' && established && neglected) {
+      out.push(p.tier < 4 ? { p, action: 'down', to: p.tier + 1, why: `No contact in ${s.tDays} days` } : { p, action: 'archive', why: `No contact in ${s.tDays} days` });
+    } else if (p.kind === 'acq' && s.tDays > 60 && since(p.metDate || p.created) > 60) {
+      out.push({ p, action: 'archive', why: `No contact in ${s.tDays} days` });
+    }
+  }
+  return out;
+}
+
+function installBanner() {
+  if (!isHosted() || isStandalone() || state.settings.installDismissed) return '';
+  if (isIOS()) return `<div class="banner-row"><div class="grow"><b>Put Orbit on your Home Screen.</b> <span class="muted">Tap ${SHARE_SVG} Share, then "Add to Home Screen". Do this before adding people: the Home Screen app keeps its own data, separate from Safari.</span></div>
+      <button class="btn btn-sm btn-quiet" onclick="App.dismissInstall()">Hide</button></div>`;
+  if (installPrompt) return `<div class="banner-row"><div class="grow"><b>Install Orbit.</b> <span class="muted">Opens like an app and works offline. Your data stays on this device.</span></div>
+      <button class="btn btn-sm btn-primary" onclick="App.install()">Install</button><button class="btn btn-sm btn-quiet" onclick="App.dismissInstall()">Hide</button></div>`;
+  return '';
+}
+function needsBackup() {
+  const st = state.settings;
+  if (state.people.length < 3) return false;
+  if (st.backupSnooze && since(st.backupSnooze) < 14) return false;
+  if (!st.lastBackup) return since(state.people.reduce((m, p) => p.created < m ? p.created : m, today())) >= 14;
+  return since(st.lastBackup) >= 30;
+}
+
+/* pieces */
+function tag(p) {
+  let t = '';
+  if (p.kind === 'acq') t += '<span class="tag tag-acq">Acquaintance</span>';
+  else if (p.promotedAt) t += `<span class="tag tag-grew" title="Became a friend on ${nice(p.promotedAt)}">Grew from acquaintance</span>`;
+  if (p.remote) t += `<span class="tag tag-ld"${p.location ? ` title="${esc(p.location)}"` : ''}>Long distance</span>`;
+  return t;
+}
+function meta(p, parts = []) {
+  return `<div class="meta">${tag(p)}<span>${[levelInfo(p).label, ...parts].filter(Boolean).map(esc).join(' · ')}</span></div>`;
+}
+function status(kind, text) { return `<span class="status s-${kind}">${esc(text)}</span>`; }
+function dueStatus(due) {
+  const rem = diffDays(today(), due);
+  if (rem < 0) return status(-rem > 3 ? 'overdue' : 'due', `${-rem}d overdue`);
+  if (rem === 0) return status('due', 'Due today');
+  return status('soon', `By ${wd(due)}`);
+}
+function ideaFor(p, type) {
+  const set = p.remote && type === 'text' ? IDEAS.remoteText
+    : p.kind === 'acq' ? (type === 'hang' ? IDEAS.acqHang : IDEAS.acqText) : (type === 'hang' ? IDEAS.friendHang : IDEAS.friendText);
+  return set[(hash(p.id + weekStart(today()) + type) + (ideaShift[p.id + type] || 0)) % set.length];
+}
+function ideaHtml(p, type) {
+  return `<p class="idea">${esc(ideaFor(p, type))} <button class="another" onclick="App.shuffle('${p.id}','${type}')">Another idea</button></p>`;
+}
+function extraLines(p, s, ws, we) {
+  let h = '';
+  const b = p.birthday && nextBirthday(p, ws);
+  if (b && b <= we) h += `<p class="note"><b>Birthday</b>&ensp;${relDay(b)}</p>`;
+  for (const f of openFollowUps(p).slice(0, 2)) h += `<p class="note"><b>Follow up</b>&ensp;${esc(f.text)}${f.date ? ` (${relDay(f.date)})` : ''}</p>`;
+  const ints = (p.interests || '').split(',').map(x => x.trim()).filter(Boolean);
+  if (ints.length) h += `<p class="note"><b>Into</b>&ensp;${esc(ints.join(', '))}</p>`;
+  if (s.noteLog) h += `<p class="note"><b>${nice(s.noteLog.date)}</b>&ensp;${esc(s.noteLog.note)}</p>`;
+  return h;
+}
+const eventWhen = e => `${wd(e.date)} ${nice(e.date)}${e.time ? ', ' + fmtTime(e.time) : ''}`;
+
+/* nav */
+function remainingThisWeek() {
+  const plan = weekPlan(weekStart(today()));
+  return plan.see.filter(x => !x.done && !x.planned).length + plan.text.filter(x => !x.done).length;
+}
+function renderNav() {
+  const left = activePeople().length ? remainingThisWeek() : 0;
+  const tabs = [['week', 'This week'], ['calendar', 'Calendar'], ['people', 'People'], ['insights', 'Insights'], ['science', 'Research'], ['settings', 'Settings']];
+  $('#nav').innerHTML = tabs.map(([k, l]) =>
+    `<button class="${view === k ? 'on' : ''}" onclick="App.go('${k}')">${l}${k === 'week' && left ? `<span class="n" title="Still to do this week">${left}</span>` : ''}</button>`).join('');
+  const short = [['week', 'Week'], ['calendar', 'Calendar'], ['people', 'People'], ['insights', 'Insights'], ['settings', 'Settings']];
+  $('#tabbar').innerHTML = short.map(([k, l]) =>
+    `<button class="${view === k || (k === 'settings' && view === 'science') ? 'on' : ''}" onclick="App.go('${k}')" aria-label="${l}"><svg viewBox="0 0 24 24">${TAB_ICONS[k]}</svg>${l}${k === 'week' && left ? `<span class="n">${left}</span>` : ''}</button>`).join('');
+}
+function render() {
+  materialize(addDays(maxDate([today(), calWeek]), 42));
+  renderNav();
+  $('#main').innerHTML = ({ week: renderWeek, calendar: renderCalendar, people: renderPeople, insights: renderInsights, science: renderScience, settings: renderSettings })[view]();
+}
+
+function emptyState() {
+  return `<div class="empty">
+    <div class="orbit"></div>
+    <h1>Keep up with your people.</h1>
+    <p class="lede">Add your friends and the people you've just met. Each week, Orbit suggests who to see and who to message, based on how close you are and what research says about how friendships grow and fade.</p>
+    <div class="actions">
+      <button class="btn btn-primary" onclick="App.personForm()">Add a person</button>
+      <button class="btn" onclick="App.bulkForm()">Add several at once</button>
+      <button class="btn btn-quiet" onclick="App.loadSample()">Explore with sample data</button>
+    </div></div>`;
+}
+
+/* this week */
+function renderWeek() {
+  if (!activePeople().length) return emptyState();
+  const t = today(), ws = weekStart(t);
+  const plan = weekPlan(ws, showAll);
+  const items = [...plan.see, ...plan.text];
+  const total = items.length;
+  const done = items.filter(x => x.done).length;
+  const planned = plan.see.filter(x => !x.done && x.planned).length;
+  const toGo = total - done - planned;
+  const daysLeft = diffDays(t, plan.we) + 1;
+
+  let h = `<div class="eyebrow">Week of ${rangeLabel(ws)} · ${plural(daysLeft, 'day')} left</div>
+    <h1>This week.</h1>
+    <p class="lede">${total ? `See ${people(plan.see.length)} in person and check in with ${people(plan.text.length)}.` : 'Nothing is due this week.'}</p>
+    ${total ? `<div class="week-progress"><div class="bar2"><span class="d" style="width:${done / total * 100}%"></span><span class="p" style="width:${planned / total * 100}%"></span></div><span>${[`${done} done`, planned ? `${planned} planned` : '', `${toGo} to go`].filter(Boolean).join(' · ')}</span></div>` : ''}
+    <div class="toolbar"><button class="btn btn-primary" onclick="App.eventForm()">Plan something</button><button class="btn" onclick="App.logForm()">Log interaction</button><button class="btn" onclick="App.personForm()">Add person</button></div>`;
+
+  // banners: past plans awaiting confirmation, backup nudge
+  const pending = state.events.filter(e => !e.done && e.date < ws).sort(byDate).reverse();
+  const rows = pending.map(e => `<div class="banner-row">
+      <div class="grow"><b>Did this happen?</b> <span class="muted">${esc(e.title)} · ${eventWhen(e)}${e.personIds.length ? ' · ' + esc(listNames(names(e.personIds))) : ''}</span></div>
+      <button class="btn btn-sm btn-primary" onclick="App.confirmEvent('${e.id}')">Yes</button>
+      <button class="btn btn-sm btn-quiet" onclick="App.eventForm('${e.id}')">Edit</button>
+      <button class="btn btn-sm btn-quiet" onclick="App.cancelEvent('${e.id}')">It didn't</button></div>`);
+  // this week's past, unconfirmed plans that aren't already shown on a card
+  const onCards = new Set(plan.see.map(x => x.planned?.id).filter(Boolean));
+  for (const e of state.events.filter(e => !e.done && e.date >= ws && e.date < t && !onCards.has(e.id)).sort(byDate))
+    rows.push(`<div class="banner-row"><div class="grow"><b>Did this happen?</b> <span class="muted">${esc(e.title)} · ${eventWhen(e)}${e.personIds.length ? ' · ' + esc(listNames(names(e.personIds))) : ''}</span></div>
+      <button class="btn btn-sm btn-primary" onclick="App.confirmEvent('${e.id}')">Yes</button>
+      <button class="btn btn-sm btn-quiet" onclick="App.eventForm('${e.id}')">Edit</button>
+      <button class="btn btn-sm btn-quiet" onclick="App.cancelEvent('${e.id}')">It didn't</button></div>`);
+  const ins = installBanner();
+  if (ins) rows.unshift(ins);
+  if (needsBackup()) rows.push(`<div class="banner-row"><div class="grow"><b>Back up your data.</b> <span class="muted">Everything lives only in this browser. A backup file keeps it safe.</span></div>
+      <button class="btn btn-sm btn-primary" onclick="App.exportData()">Export backup</button>
+      <button class="btn btn-sm btn-quiet" onclick="App.snoozeBackup()">Later</button></div>`);
+  if (rows.length) h += `<div class="banner">${rows.join('')}</div>`;
+
+  // don't forget: birthdays and dated follow-ups
+  const soonEnd = maxDate([plan.we, addDays(t, 7)]);
+  const bdays = activePeople().map(p => ({ p, d: p.birthday && nextBirthday(p, ws) })).filter(x => x.d && x.d <= soonEnd).sort((a, b) => a.d.localeCompare(b.d));
+  const fus = activePeople().flatMap(p => openFollowUps(p).filter(f => f.date && f.date <= plan.we).map(f => ({ p, f }))).sort((a, b) => a.f.date.localeCompare(b.f.date));
+  if (bdays.length || fus.length) {
+    h += `<div class="section"><div class="eyebrow">Don't forget<span>${bdays.length + fus.length}</span></div></div><div class="rows">`;
+    h += bdays.map(({ p, d }) => `<div class="row task" ${RB} onclick="App.detail('${p.id}')"><span class="ring"></span>
+      <div class="row-main"><div class="name">${esc(p.name)}'s birthday</div>${meta(p)}</div>
+      <div class="cell right"><span class="cell-label">Birthday</span>${status(d < t ? 'soon' : diffDays(t, d) <= 1 ? 'due' : 'plan', relDay(d))}</div></div>`).join('');
+    h += fus.map(({ p, f }) => `<div class="row task" ${RB} onclick="App.detail('${p.id}')"><button class="tick" title="Mark done" aria-label="Mark done" onclick="event.stopPropagation();App.fuDone('${p.id}','${f.id}')"></button>
+      <div class="row-main"><div class="name">${esc(f.text)}</div><div class="meta"><span>${esc(p.name)}</span></div></div>
+      <div class="cell right"><span class="cell-label">Follow up</span>${status(f.date < t ? 'overdue' : f.date === t ? 'due' : 'plan', relDay(f.date))}</div></div>`).join('');
+    h += `</div>`;
+  }
+
+  if (!total) h += `<div class="quiet-box" style="margin-top:44px"><h3>All caught up.</h3><p style="margin:0">Everyone is on track this week. Reach out to someone anyway if you feel like it.</p></div>`;
+
+  if (plan.see.length) {
+    h += `<div class="section"><div class="eyebrow">See in person<span>${plan.see.filter(x => x.done).length}/${plan.see.length}</span></div><div class="section-note">Time together builds closeness fastest</div></div>`;
+    // group suggestions
+    const open = plan.see.filter(x => !x.done && !x.planned);
+    const byGroup = {};
+    for (const x of open) for (const g of x.p.groups || []) (byGroup[g] = byGroup[g] || []).push(x.p.id);
+    groupSugs = Object.entries(byGroup).filter(([, ids]) => ids.length >= 2).sort((a, b) => b[1].length - a[1].length).slice(0, 2);
+    if (groupSugs.length) h += `<div class="banner" style="margin:0 0 14px">${groupSugs.map(([g, ids], i) => `<div class="banner-row">
+      <div class="grow"><b>${esc(g)}</b> <span class="muted">${esc(listNames(names(ids)))} are all due. One plan together covers everyone.</span></div>
+      <button class="btn btn-sm" onclick="App.planGroup(${i})">Plan together</button></div>`).join('')}</div>`;
+    h += `<div class="cards">`;
+    for (const it of plan.see) {
+      const { p } = it, s = stats(p);
+      const e = it.planned;
+      let st, body, actions = '';
+      if (it.done) {
+        st = status('good', `Done ${wd(it.done.date)}`);
+        body = `<p class="idea">Saw them ${wd(it.done.date)}${+it.done.hours ? ` for ${fmtH(+it.done.hours)}` : ''}${it.done.note ? `. ${esc(it.done.note)}` : '.'}</p>`;
+      } else if (e && e.date < t) {
+        st = status('due', 'Confirm');
+        body = `<p class="idea"><b>${esc(e.title)}</b> · ${eventWhen(e)}</p>`;
+        actions = `<button class="btn btn-primary btn-sm" onclick="App.confirmEvent('${e.id}')">It happened</button>
+          <button class="btn btn-sm" onclick="App.eventForm('${e.id}')">Edit</button>
+          <button class="btn btn-quiet btn-sm" onclick="App.cancelEvent('${e.id}')">It didn't</button>`;
+      } else if (e) {
+        st = status('plan', `Planned ${e.date > plan.we ? relDay(e.date) : wd(e.date)}`);
+        body = `<p class="idea"><b>${esc(e.title)}</b> · ${eventWhen(e)}${e.location ? ' · ' + esc(e.location) : ''}</p>${extraLines(p, s, ws, plan.we)}`;
+        actions = `<button class="btn btn-sm" onclick="App.eventForm('${e.id}')">View plan</button>`;
+      } else {
+        st = dueStatus(it.due);
+        body = ideaHtml(p, 'hang') + extraLines(p, s, ws, plan.we);
+        actions = `<button class="btn btn-primary btn-sm" onclick="App.eventForm(null,{personIds:['${p.id}']})">Schedule</button>
+          <button class="btn btn-sm" onclick="App.logForm('${p.id}','hangout')">Log time together</button>
+          <button class="btn btn-quiet btn-sm" onclick="App.skip('${p.id}','hang')">Skip this week</button>`;
+      }
+      h += `<article class="card ${it.done ? 'is-done' : ''}">
+        <div class="card-top"><button class="name" onclick="App.detail('${p.id}')">${esc(p.name)}</button>${st}</div>
+        ${meta(p, [s.lastHang ? `last seen ${ago(since(s.lastHang))}` : 'not seen yet', s.hours ? `${fmtH(s.hours)} together` : ''])}
+        ${body}
+        ${actions ? `<div class="actions">${actions}</div>` : ''}</article>`;
+    }
+    h += `</div>`;
+  }
+
+  if (plan.text.length) {
+    h += `<div class="section"><div class="eyebrow">Check in<span>${plan.text.filter(x => x.done).length}/${plan.text.length}</span></div><div class="section-note">A short message is enough</div></div><div class="cards">`;
+    for (const it of plan.text) {
+      const { p } = it, s = stats(p);
+      const st = it.done ? status('good', 'Done') : it.times > 1 ? status(it.count ? 'soon' : 'due', `${it.count} of ${it.times} this week`) : dueStatus(it.due);
+      h += `<article class="card ${it.done ? 'is-done' : ''}">
+        <div class="card-top"><button class="name" onclick="App.detail('${p.id}')">${esc(p.name)}</button>${st}</div>
+        ${meta(p, [p.remote && p.location ? p.location : '', s.lastAny ? `last contact ${ago(since(s.lastAny))}` : 'no contact yet'])}
+        ${it.done ? `<p class="idea">In touch ${s.lastAny ? wd(s.lastAny) : ''}.</p>` : `${ideaHtml(p, 'text')}${extraLines(p, s, ws, plan.we)}
+        <div class="actions">
+          <button class="btn btn-primary btn-sm" onclick="App.quickLog('${p.id}','text')">Texted</button>
+          <button class="btn btn-sm" onclick="App.quickLog('${p.id}','call')">Called</button>
+          <button class="btn btn-sm" onclick="App.quickLog('${p.id}','text',false,'them')" title="They messaged you first">They reached out</button>
+          <button class="btn btn-quiet btn-sm" onclick="App.skip('${p.id}','text')">Skip</button>
+        </div>`}</article>`;
+    }
+    h += `</div>`;
+  }
+
+  if (plan.hidden > 0) h += `<p class="muted small" style="margin-top:18px">${plan.hidden} more could use attention. Orbit keeps the weekly list manageable. <button class="linkish" onclick="App.toggleAll()">Show all</button></p>`;
+  else if (showAll) h += `<p class="muted small" style="margin-top:18px"><button class="linkish" onclick="App.toggleAll()">Show fewer</button></p>`;
+
+  // this week's plans
+  const evs = state.events.filter(e => e.date >= ws && e.date <= plan.we).sort(byDate);
+  h += `<div class="section"><div class="eyebrow">Plans this week<span>${evs.length}</span></div><button class="linkish small" onclick="App.go('calendar')">Open calendar</button></div>`;
+  h += evs.length ? `<div class="rows">${evs.map(planRow).join('')}</div>` : `<p class="muted small">Nothing on the calendar yet. <button class="linkish" onclick="App.eventForm()">Plan something</button></p>`;
+
+  // next week preview
+  const ids = new Set(items.map(x => x.p.id));
+  const next = weekPlan(addDays(ws, 7));
+  const nextRows = [...next.see.map(x => ({ ...x, kind: 'See' })), ...next.text.map(x => ({ ...x, kind: 'Check in' }))]
+    .filter(x => !ids.has(x.p.id)).filter((x, i, a) => a.findIndex(y => y.p.id === x.p.id) === i).slice(0, 6);
+  if (nextRows.length) {
+    h += `<div class="section"><div class="eyebrow">Next week<span>${nextRows.length}</span></div><div class="section-note">${rangeLabel(next.ws)}</div></div><div class="rows">`;
+    h += nextRows.map(x => `<div class="row simple" ${RB} onclick="App.detail('${x.p.id}')"><span class="dot s-soon"></span>
+      <div class="row-main"><div class="name">${esc(x.p.name)}</div>${meta(x.p)}</div>
+      <div class="cell right"><span class="cell-label">${x.kind}</span><span>${x.planned ? `Planned ${wd(x.planned.date)}` : `By ${wd(x.due < next.ws ? next.ws : x.due)}`}</span></div></div>`).join('') + `</div>`;
+  }
+  return h;
+}
+function planRow(e) {
+  const who = names(e.personIds);
+  const st = e.done ? status('good', 'Done') : e.date < today() ? status('due', 'Confirm') : status('plan', 'Planned');
+  const sr = seriesOf(e);
+  return `<div class="row plan" ${RB} onclick="App.eventForm('${e.id}')">
+    <div class="when-col"><b>${wd(e.date)} ${parseD(e.date).getDate()}</b><span>${e.time ? fmtTime(e.time) : 'Any time'}</span></div>
+    <div class="row-main"><div class="name">${esc(e.title)}</div><div class="meta"><span>${esc([who.length ? listNames(who) : 'No one added', e.location, sr?.repeat ? REPEAT_LABEL[sr.repeat].toLowerCase() : ''].filter(Boolean).join(' · '))}</span></div></div>
+    ${st}</div>`;
+}
+
+/* calendar */
+function renderCalendar() {
+  const ws = calWeek, we = addDays(ws, 6), t = today();
+  const days = [...Array(7)].map((_, i) => addDays(ws, i));
+  const isThis = ws === weekStart(t);
+  const logsW = state.logs.filter(l => l.date >= ws && l.date <= we && person(l.personId));
+  const evsW = state.events.filter(e => e.date >= ws && e.date <= we);
+
+  let h = `<div class="cal-head"><div><div class="eyebrow">${isThis ? 'This week' : ws < weekStart(t) ? 'Past week' : 'Upcoming week'}</div><h1>${rangeLabel(ws)}<span class="muted" style="font-size:.55em;margin-left:10px">${parseD(ws).getFullYear()}</span></h1></div>
+    <div class="cal-nav">
+      <button class="btn btn-icon" onclick="App.calShift(-7)" aria-label="Previous week">&lsaquo;</button>
+      <button class="btn" onclick="App.calShift(0)" ${isThis ? 'disabled style="opacity:.5"' : ''}>Today</button>
+      <button class="btn btn-icon" onclick="App.calShift(7)" aria-label="Next week">&rsaquo;</button>
+      <button class="btn btn-primary" style="margin-left:8px" onclick="App.eventForm(null,{date:'${isThis ? t : ws}'})">Add activity</button>
+    </div></div>
+  <div class="cal">`;
+  for (const d of days) {
+    const evs = evsW.filter(e => e.date === d).sort((a, b) => (a.time || '99').localeCompare(b.time || '99'));
+    const logs = logsW.filter(l => l.date === d && !l.eventId);
+    const inPerson = logs.filter(l => l.type !== 'text');
+    const texts = [...new Set(logs.filter(l => l.type === 'text').map(l => person(l.personId).name))];
+    const bdays = activePeople().filter(p => p.birthday && bdayIn(+d.slice(0, 4), p.birthday) === d);
+    h += `<div class="day ${d === t ? 'today' : ''} ${d < t ? 'past' : ''}">
+      <div class="day-head"><span class="day-name">${wd(d)}</span><span class="day-num">${parseD(d).getDate()}</span></div>
+      ${bdays.map(p => `<button class="ev bday" onclick="App.detail('${p.id}')"><span class="t">Birthday</span><b>${esc(p.name)}</b></button>`).join('')}
+      ${evs.map(e => `<button class="ev ${e.done ? 'done' : e.date < t ? 'confirm' : ''}" onclick="App.eventForm('${e.id}')">
+        <span class="t">${e.time ? fmtTime(e.time) : 'Any time'}${seriesOf(e)?.repeat ? ' · repeats' : ''}</span><b>${esc(e.title)}</b>${e.personIds.length ? `<span class="who">${esc(names(e.personIds).join(', '))}</span>` : ''}</button>`).join('')}
+      ${inPerson.map(l => `<button class="ev log" onclick="App.detail('${l.personId}')"><span class="t">${l.type === 'call' ? 'Call' : 'In person'}${+l.hours ? ' · ' + fmtH(+l.hours) : ''}</span><b>${esc(person(l.personId).name)}</b></button>`).join('')}
+      ${texts.length ? `<div class="day-texts">Texted ${esc(texts.join(', '))}</div>` : ''}
+      <button class="day-add" onclick="App.eventForm(null,{date:'${d}'})">+ Add</button>
+    </div>`;
+  }
+  h += `</div>`;
+  const hrs = logsW.filter(l => l.type === 'hangout').reduce((s, l) => s + (+l.hours || 0), 0);
+  const seen = new Set(logsW.filter(l => l.type === 'hangout').map(l => l.personId)).size;
+  const msgs = logsW.filter(l => l.type !== 'hangout').length;
+  h += `<div class="cal-sum"><span><b>${evsW.length}</b> ${evsW.length === 1 ? 'activity' : 'activities'}</span><span><b>${people(seen)}</b> seen in person</span><span><b>${fmtH(hrs)}</b> together</span><span><b>${msgs}</b> texts and calls</span></div>`;
+  return h;
+}
+
+/* people */
+function renderPeople() {
+  let ppl = state.people.filter(p => !p.archived);
+  if (pf.kind === 'friend') ppl = ppl.filter(p => p.kind === 'friend');
+  if (pf.kind === 'acq') ppl = ppl.filter(p => p.kind === 'acq');
+  if (pf.kind === 'remote') ppl = ppl.filter(p => p.remote);
+  if (pf.kind === 'archived') ppl = state.people.filter(p => p.archived);
+  if (pf.group) ppl = ppl.filter(p => (p.groups || []).includes(pf.group));
+  if (pf.q) { const q = pf.q.toLowerCase(); ppl = ppl.filter(p => [p.name, p.interests, p.metAt, p.notes, p.location, (p.groups || []).join(' ')].join(' ').toLowerCase().includes(q)); }
+  const S = new Map(ppl.map(p => [p.id, stats(p)]));
+  const urg = p => { const s = S.get(p.id); return Math.max(s.tSkipped ? 0 : s.tScore, s.hSkipped ? 0 : s.hScore); };
+  if (pf.sort === 'urgency') ppl.sort((a, b) => urg(b) - urg(a));
+  else if (pf.sort === 'name') ppl.sort((a, b) => a.name.localeCompare(b.name));
+  else if (pf.sort === 'level') ppl.sort((a, b) => (a.kind === b.kind ? lvl(a) - lvl(b) : a.kind === 'friend' ? -1 : 1) || a.name.localeCompare(b.name));
+  else if (pf.sort === 'recent') ppl.sort((a, b) => (S.get(a.id).lastAny ? S.get(a.id).tDays : 1e9) - (S.get(b.id).lastAny ? S.get(b.id).tDays : 1e9));
+
+  const nF = state.people.filter(p => !p.archived && p.kind === 'friend').length;
+  const nL = state.people.filter(p => !p.archived && p.remote).length;
+  const nA = state.people.filter(p => !p.archived && p.kind === 'acq').length;
+  const nX = state.people.filter(p => p.archived).length;
+  const groups = allGroups();
+  if (pf.group && !groups.includes(pf.group)) pf.group = '';
+  const tab = (k, l) => `<button class="${pf.kind === k ? 'on' : ''}" onclick="App.pf('kind','${k}')">${l}</button>`;
+
+  let h = `<div class="eyebrow">${plural(nF, 'friend')} · ${plural(nA, 'acquaintance')}${nL ? ` · ${nL} long distance` : ''}</div><h1>People</h1>
+  <div class="toolbar">
+    <input class="search" id="q" placeholder="Search" value="${esc(pf.q)}" oninput="App.search(this.value)">
+    <div class="seg-tabs">${tab('all', 'All')}${tab('friend', 'Friends')}${tab('acq', 'Acquaintances')}${nL ? tab('remote', 'Long distance') : ''}${nX ? tab('archived', 'Archived') : ''}</div>
+    ${groups.length ? `<select class="inline" onchange="App.pf('group',this.value)"><option value="">All groups</option>${groups.map(g => `<option value="${esc(g)}" ${pf.group === g ? 'selected' : ''}>${esc(g)}</option>`).join('')}</select>` : ''}
+    <select class="inline" onchange="App.pf('sort',this.value)">
+      ${[['urgency', 'Most due'], ['level', 'Closeness'], ['name', 'Name'], ['recent', 'Recent contact']].map(([v, l]) => `<option value="${v}" ${pf.sort === v ? 'selected' : ''}>${l}</option>`).join('')}
+    </select>
+    <div style="margin-left:auto;display:flex;gap:8px"><button class="btn" onclick="App.bulkForm()">Add several</button><button class="btn btn-primary" onclick="App.personForm()">Add person</button></div>
+  </div>`;
+  if (!state.people.length) return h + emptyState();
+  if (!ppl.length) return h + `<p class="muted" style="margin-top:32px">No one matches.</p>`;
+  h += `<div class="rows" style="margin-top:28px">`;
+  for (const p of ppl) {
+    const s = S.get(p.id);
+    const prog = p.kind === 'acq' ? `<div class="bar" style="margin-top:9px;max-width:200px" title="${fmtH(s.hours)} of about 50h to casual friend"><span style="width:${Math.min(100, s.hours / 50 * 100)}%"></span></div>` : '';
+    const textCell = `<div class="cell"><span class="cell-label">Check in</span>${s.tSkipped ? '<span class="muted">Skipped</span>' : status(statusOf(s.tRatio), dueIn(s.textRem))}</div>`;
+    const seeCell = `<div class="cell"><span class="cell-label">See</span>${p.remote ? `<span class="muted">${s.upcoming[0] ? `Visit ${wd(s.upcoming[0].date)}` : 'Long distance'}</span>` : s.upcoming[0] ? status('plan', `Planned ${relDay(s.upcoming[0].date)}`) : s.hSkipped ? '<span class="muted">Skipped</span>' : status(statusOf(s.hRatio), dueIn(s.hangRem))}</div>`;
+    h += `<div class="row" ${RB} onclick="App.detail('${p.id}')">
+      <span class="dot s-${s.status}" title="${STATUS_LABEL[s.status]}"></span>
+      <div class="row-main"><div class="name">${esc(p.name)}</div>${meta(p, [s.lastAny ? `last contact ${ago(since(s.lastAny))}` : '', (p.groups || []).join(', ')])}${prog}</div>
+      ${textCell}${seeCell}
+    </div>`;
+  }
+  return h + `</div>`;
+}
+
+/* insights */
+function renderInsights() {
+  const ppl = activePeople();
+  if (!ppl.length) return `<h1>Insights</h1>` + emptyState();
+  const S = new Map(ppl.map(p => [p.id, stats(p)]));
+  const cutoff = addDays(today(), -30);
+  const recent = state.logs.filter(l => l.date > cutoff && l.date <= today() && person(l.personId));
+  const cnt = t => recent.filter(l => l.type === t).length;
+  const hrs = recent.filter(l => l.type === 'hangout').reduce((s, l) => s + (+l.hours || 0), 0);
+  const onTrack = ppl.filter(p => S.get(p.id).tRatio < 1 && (p.remote || S.get(p.id).hRatio < 1 || S.get(p.id).upcoming.length)).length;
+  const reached = new Set(recent.map(l => l.personId)).size;
+
+  let h = `<div class="eyebrow">Last 30 days</div><h1>Insights</h1>
+  <div class="stats">
+    <div class="stat"><b>${Math.round(onTrack / ppl.length * 100)}%</b><span>On track</span></div>
+    <div class="stat"><b>${reached}</b><span>People reached</span></div>
+    <div class="stat"><b>${cnt('text') + cnt('call')}</b><span>Texts and calls</span></div>
+    <div class="stat"><b>${cnt('hangout')}</b><span>Times in person</span></div>
+    <div class="stat"><b>${fmtH(hrs)}</b><span>Time together</span></div>
+  </div>`;
+
+  // tier check
+  const checks = tierChecks();
+  if (checks.length) {
+    h += `<div class="section"><div class="eyebrow">Check your tiers<span>${checks.length}</span></div><div class="section-note">Keeps the weekly plan matched to reality</div></div><div class="rows">`;
+    h += checks.map(c => {
+      const target = c.action === 'archive' ? 'Archive' : `Move to ${LEVELS.friend[c.to].label.toLowerCase()}`;
+      const q = c.action === 'up' ? `Closer than a ${levelInfo(c.p).label.toLowerCase()}?` : c.action === 'down' ? 'Ease off to a looser tier?' : c.p.kind === 'acq' ? 'Let this one go for now?' : 'Archive for now?';
+      return `<div class="row simple" style="cursor:default"><span class="dot s-${c.action === 'up' ? 'good' : 'due'}"></span>
+        <div class="row-main"><div class="name"><button class="name" onclick="App.detail('${c.p.id}')">${esc(c.p.name)}</button></div><div class="meta"><span>${esc(c.why)}. ${esc(q)}</span></div></div>
+        <div class="actions" style="margin:0;flex-wrap:nowrap"><button class="btn btn-sm" onclick="App.applyTier('${c.p.id}','${c.action}',${c.to || 0})">${target}</button><button class="btn btn-sm btn-quiet" onclick="App.dismissTier('${c.p.id}')">Keep</button></div></div>`;
+    }).join('') + `</div>`;
+  }
+
+  h += `<div class="section"><div class="eyebrow">Your circles</div><div class="section-note">Compared with Dunbar's layers</div></div>
+  <table><tr><th>Tier</th><th>People</th><th>Typical capacity</th><th>Check in / see</th></tr>`;
+  for (const l of [1, 2, 3, 4]) {
+    const L = LEVELS.friend[l], n = ppl.filter(p => p.kind === 'friend' && p.tier === l).length, iv = state.settings.intervals.friend[l];
+    h += `<tr><td>${L.label}</td><td>${n > L.cap ? status('due', `${n}, over capacity`) : n}</td><td class="muted">about ${L.cap}</td><td class="muted">every ${iv.text}d / ${iv.hang}d</td></tr>`;
+  }
+  h += `</table><p class="muted small" style="margin-top:14px;max-width:620px">Each layer is about three times the size of the one inside it. Only a handful of people can stay at weekly closeness at once, so honest tiers keep suggestions realistic.</p>`;
+
+  const acqs = ppl.filter(p => p.kind === 'acq').sort((a, b) => S.get(b.id).hours - S.get(a.id).hours);
+  h += `<div class="section"><div class="eyebrow">Acquaintances<span>${acqs.length}</span></div><div class="section-note">About 50 hours to a casual friendship (Hall, 2019)</div></div>`;
+  if (!acqs.length) h += `<p class="muted">No acquaintances yet. <button class="linkish" onclick="App.personForm(null,'acq')">Add someone you've just met</button></p>`;
+  else {
+    h += `<div class="rows">`;
+    for (const p of acqs) {
+      const s = S.get(p.id);
+      const start = p.metDate || p.created;
+      const weeks = Math.max(1, since(start) / 7);
+      const pace = s.hours / weeks;
+      const left = Math.max(0, 50 - s.hours);
+      const eta = left === 0 ? 'Ready to promote' : pace > 0 ? `about ${Math.ceil(left / pace)} weeks to go at this pace` : 'log time together to start';
+      const cold = s.tDays > 45;
+      h += `<div class="row simple" ${RB} onclick="App.detail('${p.id}')"><span class="dot s-${s.status}"></span>
+        <div class="row-main"><div class="name">${esc(p.name)}</div>
+          <div class="meta"><span>${esc([levelInfo(p).label, `${pace.toFixed(1)}h per week`, eta].join(' · '))}</span>${cold ? status('overdue', 'Going cold') : ''}</div>
+          <div class="bar" style="margin-top:10px"><span style="width:${Math.min(100, s.hours / 50 * 100)}%"></span></div></div>
+        <div class="cell right"><span class="cell-label">Together</span><span>${fmtH(s.hours)} / 50h</span></div></div>`;
+    }
+    h += `</div>`;
+  }
+
+  // reciprocity
+  const bal = ppl.map(p => ({ p, b: balance(p) })).filter(x => x.b.n >= 6 && (x.b.me / x.b.n >= 0.8 || x.b.them / x.b.n >= 0.6)).sort((a, b) => b.b.me / b.b.n - a.b.me / a.b.n);
+  if (bal.length) {
+    h += `<div class="section"><div class="eyebrow">Who reaches out</div><div class="section-note">Last 6 months</div></div><div class="rows">`;
+    h += bal.map(({ p, b }) => `<div class="row simple" ${RB} onclick="App.detail('${p.id}')"><span class="dot s-${b.me / b.n >= 0.8 ? 'due' : 'good'}"></span>
+      <div class="row-main"><div class="name">${esc(p.name)}</div><div class="meta"><span>${b.me / b.n >= 0.8 ? `You started ${b.me} of the last ${b.n}. Worth noticing whether it's mutual.` : `They started ${b.them} of the last ${b.n}. Return the effort.`}</span></div></div>
+      <div class="cell right"><span class="cell-label">You / them</span><span>${b.me} / ${b.them}</span></div></div>`).join('') + `</div>
+      <p class="muted small" style="margin-top:12px;max-width:620px">Some people are just bad at texting. Treat this as a signal, not a verdict.</p>`;
+  }
+
+  const neglected = ppl.filter(p => (!p.remote && S.get(p.id).hRatio >= 1.5 && !S.get(p.id).upcoming.length) || S.get(p.id).tRatio >= 1.5)
+    .sort((a, b) => Math.max(S.get(b.id).hScore, S.get(b.id).tScore) - Math.max(S.get(a.id).hScore, S.get(a.id).tScore)).slice(0, 6);
+  if (neglected.length) {
+    h += `<div class="section"><div class="eyebrow">Slipping<span>${neglected.length}</span></div><div class="section-note">Well past their usual cadence</div></div><div class="rows">`;
+    for (const p of neglected) {
+      const s = S.get(p.id);
+      h += `<div class="row simple" ${RB} onclick="App.detail('${p.id}')"><span class="dot s-overdue"></span>
+        <div class="row-main"><div class="name">${esc(p.name)}</div>${meta(p)}</div>
+        ${p.remote ? `<div class="cell right"><span class="cell-label">Last contact</span><span>${s.lastAny ? ago(since(s.lastAny)) : 'Not logged'}</span></div>`
+          : `<div class="cell right"><span class="cell-label">Last seen</span><span>${s.lastHang ? ago(since(s.lastHang)) : 'Not logged'}</span></div>`}</div>`;
+    }
+    h += `</div>`;
+  }
+
+  const grown = ppl.filter(p => p.kind === 'friend' && p.promotedAt);
+  if (grown.length) {
+    h += `<div class="section"><div class="eyebrow">Friendships you grew<span>${grown.length}</span></div></div><div class="rows">` +
+      grown.map(p => `<div class="row simple" ${RB} onclick="App.detail('${p.id}')"><span class="dot s-good"></span><div class="row-main"><div class="name">${esc(p.name)}</div>${meta(p)}</div><div class="cell right"><span class="cell-label">Friends since</span><span>${nice(p.promotedAt)}</span></div></div>`).join('') + `</div>`;
+  }
+  return h;
+}
+
+/* research */
+function renderScience() {
+  const items = [
+    [`Dunbar's circles`,
+      `People keep friends in nested layers of about <b>5, 15, 50, and 150</b>, each roughly three times the size of the one inside it. How often you're in contact drops as you move outward: the innermost layer about weekly, the next about monthly, the outermost about once a year.`,
+      `Friend tiers map onto these layers, and each has its own cadence for checking in and seeing each other. Insights flags a tier that's over capacity and suggests moving people when how often you actually see them doesn't match their tier.`,
+      `Dunbar (2018), The Anatomy of Friendship, Trends in Cognitive Sciences. Hill and Dunbar (2003). Sutcliffe, Dunbar et al. (2012).`],
+    [`Friendships fade without contact`,
+      `In an 18-month study of young adults moving to university, emotional closeness with friends dropped when contact dropped. Family ties held up much better. Friendships need regular upkeep.`,
+      `Every person has a timer. When it's about to run out, they show up in your weekly plan before the friendship has a chance to drift.`,
+      `Roberts and Dunbar (2011), Evolution and Human Behavior.`],
+    [`Hours make friends`,
+      `It takes roughly <b>50 hours</b> together to go from acquaintance to casual friend, about <b>90</b> to become friends, and <b>200 or more</b> to become close friends. Free time spent together counted toward closeness. Time together only at work or school counted much less.`,
+      `Time in person is logged in hours. Each acquaintance has a progress bar toward 50 hours, and Orbit suggests promoting them when they get there.`,
+      `Hall (2019), How many hours does it take to make a friend? Journal of Social and Personal Relationships.`],
+    [`Start strong with new people`,
+      `Seeing someone repeatedly makes you like each other more, and being physically nearby is one of the strongest predictors of who becomes friends. The time you spend together in the first few months after meeting matters a lot.`,
+      `Acquaintances you're very interested in get the most frequent nudges: a message about every 5 days and time together about every 10.`,
+      `Zajonc (1968). Festinger, Schachter and Back (1950). Hall (2019).`],
+    [`Plans beat good intentions`,
+      `People are much more likely to follow through on something when they decide in advance when and where they'll do it. Researchers call these "implementation intentions." "We should get dinner" rarely happens. "Thursday, 7pm" usually does.`,
+      `The weekly plan asks you to schedule, not just remember. Plans can repeat, so a standing weekly or monthly thing takes no re-planning, and you can export any plan to your calendar app for reminders.`,
+      `Gollwitzer (1999), American Psychologist. Gollwitzer and Sheeran (2006), Advances in Experimental Social Psychology.`],
+    [`They like you more than you think`,
+      `After a conversation, people consistently underestimate how much the other person liked them. This "liking gap" stops a lot of potential friendships from going anywhere.`,
+      `Suggestions for acquaintances push you to follow up. The odds are better than they feel.`,
+      `Boothby, Cooney, Sandstrom and Clark (2018), Psychological Science.`],
+    [`Reaching out means more than you'd guess`,
+      `People underestimate how much others appreciate a check-in, and the effect is biggest when the message comes out of the blue.`,
+      `Check-in suggestions are low-effort on purpose. You don't need a reason to send one.`,
+      `Liu, Rim, Min and Min (2023), Journal of Personality and Social Psychology.`],
+    [`Liking is mutual`,
+      `People tend to like those who seem to like them back, and acting warmly because you believe someone likes you tends to make it true. Friendships last when effort flows both ways.`,
+      `You can note who reached out. Insights points out friendships where you're doing nearly all the starting, and ones where they are and it's your turn.`,
+      `Curtis and Miller (1986), Journal of Personality and Social Psychology. Oswald, Clark and Kelly (2004).`],
+    [`In person, then voice, then text`,
+      `Young adults felt the most bonded in person, then over video, then on a voice call, and the least over text. Texting is great for staying in touch and making plans, but it can't replace time together.`,
+      `Check-ins and time together are tracked separately. Only seeing someone in person counts toward the "See in person" goal.`,
+      `Sherman, Michikyan and Greenfield (2013), Cyberpsychology.`],
+    [`Keeping long-distance friendships`,
+      `Moving away is one of the most common reasons friendships fade, mostly because it removes time in person. Staying in regular contact slows the drift, and the format matters: people feel more bonded on a voice or video call than over text.`,
+      `Long-distance friends only get check-ins, never suggestions to meet up. Their prompts often suggest a call or a voice memo, and visits still count as time together when you log them.`,
+      `Roberts and Dunbar (2011), Evolution and Human Behavior. Sherman, Michikyan and Greenfield (2013), Cyberpsychology.`],
+    [`What keeps friendships going`,
+      `Four behaviours predict lasting friendships: <b>positivity</b>, <b>supportiveness</b>, <b>openness</b>, and actually spending time together. Remembering what's going on in someone's life is a big part of being supportive.`,
+      `Follow-ups and birthdays surface at the right time, so you can ask how the interview went or send a message on the day.`,
+      `Oswald, Clark and Kelly (2004), Journal of Social and Clinical Psychology. Aron et al. (1997). Altman and Taylor (1973).`],
+    [`Why your twenties`,
+      `Phone records from millions of people show that the number of people someone stays in regular contact with peaks around age 25 and then slowly shrinks. Once school ends, the built-in time with people goes away, so friendships need deliberate effort.`,
+      `The default cadences are a bit more frequent than research on older adults would suggest. You can change them in Settings.`,
+      `Bhattacharya et al. (2016), Royal Society Open Science.`],
+  ];
+  return `<div class="eyebrow">How Orbit decides</div><h1>Research</h1>
+  <p class="lede">The cadences are sensible defaults based on these findings, not exact prescriptions from any single study. Adjust them in Settings or for any one person.</p>
+  <div class="entries">${items.map(([t, b, u, c], i) => `<div class="entry"><div class="num">${pad(i + 1)}</div><div><h3>${t}</h3><p>${b}</p><div class="use">${u}</div><div class="cite">${c}</div></div></div>`).join('')}</div>`;
+}
+
+/* settings */
+function renderSettings() {
+  const st = state.settings, iv = st.intervals, c = st.weekCaps;
+  const row = (k, l) => `<tr><td>${LEVELS[k][l].label}<span class="hint">${esc(LEVELS[k][l].hint)}</span></td>
+    <td><input type="number" min="1" value="${iv[k][l].text}" onchange="App.setIv('${k}',${l},'text',this.value)"></td>
+    <td><input type="number" min="1" value="${iv[k][l].hang}" onchange="App.setIv('${k}',${l},'hang',this.value)"></td></tr>`;
+  return `<div class="eyebrow">Preferences</div><h1>Settings</h1>
+  <div class="section"><div class="eyebrow">Friends</div><div class="section-note">Days between contact</div></div>
+  <table><tr><th>Tier</th><th>Check in every</th><th>See in person every</th></tr>${[1, 2, 3, 4].map(l => row('friend', l)).join('')}</table>
+  <div class="section"><div class="eyebrow">Acquaintances</div><div class="section-note">Days between contact</div></div>
+  <table><tr><th>Interest</th><th>Check in every</th><th>See in person every</th></tr>${[1, 2, 3].map(l => row('acq', l)).join('')}</table>
+  <div class="actions"><button class="btn btn-sm" onclick="App.resetIv()">Reset to research defaults</button></div>
+
+  <div class="section"><div class="eyebrow">Weekly plan</div><div class="section-note">Keeps the week realistic</div></div>
+  <div class="two" style="max-width:480px">
+    <div class="field" style="margin-top:0"><label>People to see per week</label><input type="number" min="1" value="${c.hang}" onchange="App.setCap('hang',this.value)"></div>
+    <div class="field" style="margin-top:0"><label>Check-ins per week</label><input type="number" min="1" value="${c.text}" onchange="App.setCap('text',this.value)"></div>
+  </div>
+
+  <div class="section"><div class="eyebrow">About</div></div>
+  <div class="rows"><div class="row simple" ${RB} onclick="App.go('science')"><span class="dot s-plan"></span>
+    <div class="row-main"><div class="name">Research</div><div class="meta"><span>How Orbit decides who to suggest and how often</span></div></div></div></div>
+
+  <div class="section"><div class="eyebrow">Data</div><div class="section-note">${st.lastBackup ? `Last backup ${nice(st.lastBackup)}` : 'No backup yet'}</div></div>
+  <p class="muted small" style="margin:0;max-width:560px">${isStandalone()
+    ? `Everything is stored on this device, inside the Orbit app. Nothing is uploaded anywhere. Removing Orbit from your Home Screen deletes its data, so export a backup now and then (Save to Files or iCloud Drive works well).`
+    : `Everything is stored in this browser on this device. Nothing is uploaded anywhere. Clearing your browser data would erase it, so export a backup now and then. A backup file also moves your data to another device: export here, AirDrop the file to your phone, then import it in Orbit there.`}</p>
+  <div class="actions">
+    <button class="btn btn-primary btn-sm" onclick="App.exportData()">Export backup</button>
+    <label class="btn btn-sm">Import backup<input type="file" accept="application/json,.json" style="display:none" onchange="App.importData(this.files[0])"></label>
+    <button class="btn btn-sm" onclick="App.loadSample()">Load sample data</button>
+    <button class="btn btn-quiet btn-sm btn-danger" onclick="App.wipe()">Erase everything</button>
+  </div>`;
+}
+
+/* modals */
+function openModal(html) {
+  $('#modal-root').innerHTML = `<div class="backdrop" onmousedown="if(event.target===this)App.close()"><div class="modal" role="dialog" aria-modal="true">${html}</div></div>`;
+  const f = $('#modal-root [autofocus]'); if (f) f.focus();
+}
+function closeModal() { $('#modal-root').innerHTML = ''; histAll = false; }
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+  const r = e.target.getAttribute?.('role') === 'button' && e.target.tagName !== 'BUTTON' ? e.target : null;
+  if (r && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); r.click(); }
+});
+
+const approxSelect = id => `<select id="${id}">${APPROX.map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>`;
+function kindFields(p) {
+  const opt = (k, sel) => Object.entries(LEVELS[k]).map(([l, L]) => `<option value="${l}" ${+sel === +l ? 'selected' : ''}>${L.label}: ${esc(L.hint)}</option>`).join('');
+  return `<div class="field"><label>Relationship</label>
+    <div class="choice">
+      <label><input type="radio" name="f-kind" value="friend" ${p.kind === 'friend' ? 'checked' : ''} onchange="App.kindToggle()"><span>Friend</span><small>An existing friendship to keep up</small></label>
+      <label class="acq"><input type="radio" name="f-kind" value="acq" ${p.kind === 'acq' ? 'checked' : ''} onchange="App.kindToggle()"><span>Acquaintance</span><small>Recently met, want to grow it</small></label>
+    </div></div>
+  <div class="field" id="f-tier-wrap"><label>Closeness</label><select id="f-tier">${opt('friend', p.tier || 3)}</select></div>
+  <div class="field" id="f-int-wrap"><label>Interest in becoming friends</label><select id="f-interest">${opt('acq', p.interest || 1)}</select></div>`;
+}
+
+function personFormHtml(p, kindDefault) {
+  const isNew = !p;
+  p = p || { kind: kindDefault || 'friend', tier: 3, interest: 1, groups: [] };
+  const [bm, bd] = p.birthday ? p.birthday.split('-') : ['', ''];
+  const groups = allGroups();
+  return `<h2>${isNew ? 'Add a person' : 'Edit ' + esc(p.name)}</h2>
+  <div class="field"><label>Name</label><input id="f-name" value="${esc(p.name || '')}" autofocus></div>
+  ${kindFields(p)}
+  <label class="check"><input type="checkbox" id="f-remote" ${p.remote ? 'checked' : ''} onchange="App.remoteToggle()"><span>Long distance<small>Check-ins only. No suggestions to meet up in person, but you can still log visits.</small></span></label>
+  <div class="field" id="f-loc-wrap" style="${p.remote ? '' : 'display:none'}"><label>Where they live</label><input id="f-location" value="${esc(p.location || '')}" placeholder="Optional, e.g. Chicago"></div>
+  ${isNew ? `<div class="two">
+    <div class="field"><label>Last in touch</label>${approxSelect('f-seedText')}</div>
+    <div class="field"><label>Last saw them in person</label>${approxSelect('f-seedHang')}</div>
+  </div><p class="muted small" style="margin:8px 0 0">A rough guess is fine. It starts their timers from the right place.</p>` : ''}
+  <div class="two">
+    <div class="field"><label>Birthday</label><div class="bday-fields">
+      <select id="f-bmonth"><option value="">Month</option>${MONTHS.map((m, i) => `<option value="${pad(i + 1)}" ${bm === pad(i + 1) ? 'selected' : ''}>${m}</option>`).join('')}</select>
+      <input type="number" id="f-bday" min="1" max="31" placeholder="Day" value="${bd ? +bd : ''}"></div></div>
+    <div class="field"><label>Groups</label><input id="f-groups" list="group-list" value="${esc((p.groups || []).join(', '))}" placeholder="e.g. College, Work">
+      <datalist id="group-list">${groups.map(g => `<option value="${esc(g)}">`).join('')}</datalist></div>
+  </div>
+  <div class="two">
+    <div class="field"><label>Where you met</label><input id="f-metAt" value="${esc(p.metAt || '')}" placeholder="Optional"></div>
+    <div class="field"><label>When you met</label><input type="date" id="f-metDate" value="${esc(p.metDate || '')}" max="${today()}"></div>
+  </div>
+  <div class="field"><label>Interests</label><input id="f-interests" value="${esc(p.interests || '')}" placeholder="Comma separated"></div>
+  <div class="field"><label>Notes</label><textarea id="f-notes" placeholder="What's going on in their life, people in their world, anything worth remembering">${esc(p.notes || '')}</textarea></div>
+  <details><summary>Custom cadence for this person</summary>
+    <div class="two">
+      <div class="field"><label>Check in every (days)</label><input type="number" min="1" id="f-textEvery" value="${esc(p.textEvery || '')}" placeholder="Default"></div>
+      <div class="field"><label>See in person every (days)</label><input type="number" min="1" id="f-hangEvery" value="${esc(p.hangEvery || '')}" placeholder="Default"></div>
+    </div></details>
+  <div class="foot">
+    <button class="btn btn-quiet" onclick="${isNew ? 'App.close()' : `App.detail('${p.id}')`}">Cancel</button>
+    <button class="btn btn-primary" onclick="App.savePerson(${isNew ? 'null' : `'${p.id}'`})">${isNew ? 'Add person' : 'Save'}</button>
+  </div>`;
+}
+
+function bulkFormHtml() {
+  return `<h2>Add several people</h2>
+  <p class="sub">One name per line. Everyone gets the settings below, and you can fine-tune each person later.</p>
+  <div class="field"><label>Names</label><textarea id="b-names" style="min-height:150px" placeholder="Jordan Lee&#10;Priya Shah&#10;Marcus" autofocus></textarea></div>
+  ${kindFields({ kind: 'friend', tier: 3, interest: 1 })}
+  <label class="check"><input type="checkbox" id="b-remote"><span>Long distance<small>Check-ins only.</small></span></label>
+  <div class="field"><label>Groups</label><input id="b-groups" list="group-list" placeholder="Optional, e.g. College"><datalist id="group-list">${allGroups().map(g => `<option value="${esc(g)}">`).join('')}</datalist></div>
+  <div class="two">
+    <div class="field"><label>Last in touch</label>${approxSelect('f-seedText')}</div>
+    <div class="field"><label>Last saw them in person</label>${approxSelect('f-seedHang')}</div>
+  </div>
+  <div class="foot">
+    <button class="btn btn-quiet" onclick="App.close()">Cancel</button>
+    <button class="btn btn-primary" onclick="App.saveBulk()">Add people</button>
+  </div>`;
+}
+
+function logFormHtml(pid, type) {
+  const ppl = activePeople().slice().sort((a, b) => a.name.localeCompare(b.name));
+  type = type || 'hangout';
+  return `<h2>Log interaction</h2>
+  <div class="field"><label>With</label>${pid ? `<input disabled value="${esc(person(pid).name)}"><input type="hidden" id="l-person" value="${pid}">`
+    : `<select id="l-person">${ppl.map(p => `<option value="${p.id}">${esc(p.name)}${p.kind === 'acq' ? ' (acquaintance)' : ''}</option>`).join('')}</select>`}</div>
+  <div class="field"><label>Type</label><div class="choice">
+    ${[['text', 'Text'], ['call', 'Call'], ['hangout', 'In person']].map(([v, l]) =>
+      `<label><input type="radio" name="l-type" value="${v}" ${type === v ? 'checked' : ''} onchange="App.typeToggle()"><span>${l}</span></label>`).join('')}
+  </div></div>
+  <div class="two">
+    <div class="field"><label>Date</label><input type="date" id="l-date" value="${today()}" max="${today()}"></div>
+    <div class="field" id="l-hours-wrap"><label>Hours together</label><input type="number" id="l-hours" min="0" step="0.5" value="2"></div>
+  </div>
+  <div class="field"><label>Who reached out</label><div class="choice">
+    <label><input type="radio" name="l-by" value="me" checked><span>You</span></label>
+    <label><input type="radio" name="l-by" value="them"><span>They did</span></label>
+  </div></div>
+  <div class="field"><label>Note</label><textarea id="l-note" placeholder="What you talked about"></textarea></div>
+  <div class="two">
+    <div class="field"><label>Follow up on</label><input id="l-fu" placeholder="Optional, e.g. ask how the interview went"></div>
+    <div class="field"><label>By</label><input type="date" id="l-fu-date" min="${today()}"></div>
+  </div>
+  <div class="foot">
+    <button class="btn btn-quiet" onclick="App.close()">Cancel</button>
+    <button class="btn btn-primary" onclick="App.saveLog()">Save</button>
+  </div>`;
+}
+
+function eventFormHtml(e) {
+  const isNew = !e.id;
+  const ppl = activePeople().slice().sort((a, b) => (a.kind === b.kind ? 0 : a.kind === 'friend' ? -1 : 1) || a.name.localeCompare(b.name));
+  for (const id of e.personIds) if (!ppl.find(p => p.id === id) && person(id)) ppl.push(person(id));
+  const past = e.date <= today();
+  const sr = seriesOf(e);
+  const repeat = sr?.repeat || '';
+  const groups = allGroups();
+  return `<h2>${isNew ? 'Plan an activity' : esc(e.title)}</h2>
+  ${!isNew && e.done ? `<p class="sub">Happened. Counted as time together for everyone who went.</p>` : ''}
+  <div class="field"><label>What</label><input id="e-title" value="${esc(e.title || '')}" placeholder="Dinner, climbing, game night" ${isNew ? 'autofocus' : ''}></div>
+  <div class="three">
+    <div class="field"><label>Date</label><input type="date" id="e-date" value="${e.date}" onchange="App.evDateChange()"></div>
+    <div class="field"><label>Time</label><input type="time" id="e-time" value="${esc(e.time || '')}"></div>
+    <div class="field"><label>Hours</label><input type="number" id="e-hours" min="0" step="0.5" value="${e.hours ?? 2}"></div>
+  </div>
+  <div class="field"><label>Repeats</label><select id="e-repeat">${Object.entries(REPEAT_LABEL).map(([v, l]) => `<option value="${v}" ${repeat === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
+    ${sr?.repeat ? `<span class="hint">Changes apply to this and upcoming repeats.</span>` : `<span class="hint">A standing plan means no re-planning.</span>`}</div>
+  <div class="field"><label>Who</label>
+    ${groups.length && ppl.length ? `<div class="group-links">Select a group:${groups.map((g, i) => ` <button type="button" class="linkish" onclick="App.pickGroup(${i})">${esc(g)}</button>`).join('')}</div>` : ''}
+    ${ppl.length ? `<div class="picker" id="e-people">${ppl.map(p => `<label class="pick ${p.kind === 'acq' ? 'acq' : ''}" title="${p.kind === 'acq' ? 'Acquaintance' : esc(levelInfo(p).label)}"><input type="checkbox" value="${p.id}" ${e.personIds.includes(p.id) ? 'checked' : ''}>${esc(p.name)}</label>`).join('')}</div>
+    <span class="hint">Green names are acquaintances.</span>` : `<span class="hint">Add people first to tag them here.</span>`}
+  </div>
+  <div class="field"><label>Where</label><input id="e-location" value="${esc(e.location || '')}" placeholder="Optional"></div>
+  <div class="field"><label>Notes</label><textarea id="e-note" placeholder="Optional">${esc(e.note || '')}</textarea></div>
+  <label class="check" id="e-done-wrap" style="${past ? '' : 'display:none'}"><input type="checkbox" id="e-done" ${e.done || (isNew && e.date < today()) ? 'checked' : ''}><span>This happened<small>Counts as time together for everyone tagged.</small></span></label>
+  <div class="foot">
+    ${isNew ? '' : `<button class="btn btn-quiet btn-danger left" onclick="App.deleteEvent('${e.id}')">Delete</button>${sr?.repeat ? `<button class="btn btn-quiet btn-danger" onclick="App.deleteEvent('${e.id}',true)">Delete all upcoming</button>` : ''}`}
+    ${isNew || e.done ? '' : `<button class="btn btn-quiet" onclick="App.ics('${e.id}')" title="Download an .ics file to add to Apple, Google or Outlook Calendar">Add to calendar app</button>`}
+    <button class="btn btn-quiet" onclick="App.close()">Cancel</button>
+    <button class="btn btn-primary" onclick="App.saveEvent(${isNew ? 'null' : `'${e.id}'`})">${isNew ? 'Add to calendar' : 'Save'}</button>
+  </div>`;
+}
+
+function detailHtml(p) {
+  const s = stats(p);
+  const next = MILESTONES.find(m => s.hours < m.h);
+  let prog;
+  if (p.kind === 'acq') {
+    const ready = s.hours >= 50;
+    prog = `<div class="panel">
+      <div class="panel-top"><span class="label" style="color:var(--acq)">Path to friendship</span><span>${fmtH(s.hours)} of about 50h</span></div>
+      <div class="bar"><span style="width:${Math.min(100, s.hours / 50 * 100)}%"></span></div>
+      <p>${ready ? `You've spent about 50 hours together, which is roughly when acquaintances become casual friends.`
+        : `About ${fmtH(50 - s.hours)} more time together before this is likely a casual friendship.`}${p.metDate ? ` Met ${ago(since(p.metDate))}.` : ''}</p>
+      <div class="actions" style="margin-top:14px"><button class="btn btn-sm" onclick="App.promoteForm('${p.id}')">Promote to friend</button></div></div>`;
+  } else {
+    const max = next ? next.h : Math.max(200, s.hours);
+    prog = `<div class="panel plain">
+      <div class="panel-top"><span class="label">Time together</span><span>${fmtH(s.hours)}${next ? ` · next: ${next.label.toLowerCase()} at about ${next.h}h` : ' · close friend range'}</span></div>
+      <div class="bar ink"><span style="width:${Math.min(100, s.hours / max * 100)}%"></span></div></div>`;
+  }
+  const met = [p.metAt, p.metDate ? nice(p.metDate) : ''].filter(Boolean).map(esc).join(', ');
+  const b = balance(p);
+  const fus = openFollowUps(p);
+  const upcoming = s.upcoming.length ? `<div class="label" style="margin-top:26px">Upcoming plans</div><div class="history">${s.upcoming.slice(0, 5).map(e =>
+    `<div class="log click" ${RB} onclick="App.eventForm('${e.id}')"><span class="when">${wd(e.date)} ${parseD(e.date).getDate()}</span><span>${esc(e.title)}${e.time ? `<span class="muted"> · ${fmtTime(e.time)}</span>` : ''}${seriesOf(e)?.repeat ? `<span class="muted"> · ${REPEAT_LABEL[seriesOf(e).repeat].toLowerCase()}</span>` : ''}</span><span></span></div>`).join('')}</div>` : '';
+  const logs = histAll ? s.logs : s.logs.slice(0, 12);
+  return `<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+      <div><h2>${esc(p.name)}</h2>${meta(p, [met ? `met ${met}` : ''])}</div>
+      ${status(s.status, p.archived ? 'Archived' : STATUS_LABEL[s.status])}</div>
+    <div class="facts">
+      <div><small>Last contact</small>${s.lastAny ? ago(since(s.lastAny)) : 'None logged'}</div>
+      <div><small>Last seen in person</small>${s.lastHang ? ago(since(s.lastHang)) : 'None logged'}</div>
+      <div><small>Next check-in</small>${s.tSkipped ? 'Skipped this week' : dueIn(s.textRem)} <span class="muted small">· every ${s.iv.text}d</span></div>
+      ${p.remote ? `<div><small>Next time together</small>${s.upcoming[0] ? `Visit ${relDay(s.upcoming[0].date)}` : `Long distance${p.location ? ' · ' + esc(p.location) : ''}`}</div>`
+        : `<div><small>Next time together</small>${s.upcoming[0] ? `Planned ${relDay(s.upcoming[0].date)}` : s.hSkipped ? 'Skipped this week' : dueIn(s.hangRem)} <span class="muted small">· every ${s.iv.hang}d</span></div>`}
+      ${p.birthday ? `<div><small>Birthday</small>${bdayLabel(p.birthday)} <span class="muted small">· ${relDay(nextBirthday(p, today()))}</span></div>` : ''}
+      ${b.n >= 4 ? `<div><small>Who reaches out</small>You ${b.me} · them ${b.them}</div>` : ''}
+    </div>
+    ${prog}
+    ${(p.groups || []).length ? `<div class="notes-block"><span class="label">Groups</span>${esc(p.groups.join(', '))}</div>` : ''}
+    ${p.interests ? `<div class="notes-block"><span class="label">Interests</span>${esc(p.interests)}</div>` : ''}
+    ${p.notes ? `<div class="notes-block"><span class="label">Notes</span>${esc(p.notes)}</div>` : ''}
+    <div class="actions" style="margin-top:22px">${p.remote ? `
+      <button class="btn btn-primary btn-sm" onclick="App.quickLog('${p.id}','text',true)">Texted today</button>
+      <button class="btn btn-sm" onclick="App.quickLog('${p.id}','call',true)">Called today</button>
+      <button class="btn btn-sm" onclick="App.quickLog('${p.id}','text',true,'them')">They reached out</button>
+      <button class="btn btn-sm" onclick="App.eventForm(null,{personIds:['${p.id}']})">Plan a visit</button>
+      <button class="btn btn-sm" onclick="App.logForm('${p.id}','hangout')">Log a visit</button>` : `
+      <button class="btn btn-primary btn-sm" onclick="App.eventForm(null,{personIds:['${p.id}']})">Schedule</button>
+      <button class="btn btn-sm" onclick="App.logForm('${p.id}','hangout')">Log time together</button>
+      <button class="btn btn-sm" onclick="App.quickLog('${p.id}','text',true)">Texted today</button>
+      <button class="btn btn-sm" onclick="App.quickLog('${p.id}','call',true)">Called today</button>
+      <button class="btn btn-sm" onclick="App.quickLog('${p.id}','text',true,'them')">They reached out</button>`}
+    </div>
+    <div class="label" style="margin-top:26px">Follow-ups</div>
+    <div class="history">${fus.map(f => `<div class="log fu"><button class="tick" title="Mark done" aria-label="Mark done" onclick="App.fuDone('${p.id}','${f.id}',true)"></button><span>${esc(f.text)}${f.date ? `<span class="muted"> · ${relDay(f.date)}</span>` : ''}</span><button class="x" title="Delete" onclick="App.fuDel('${p.id}','${f.id}')">&times;</button></div>`).join('')}</div>
+    <div class="inline-add"><input id="fu-text" placeholder="Something to ask about next time" onkeydown="if(event.key==='Enter')App.fuAdd('${p.id}')"><input type="date" id="fu-date" min="${today()}" title="Optional date"><button class="btn btn-sm" onclick="App.fuAdd('${p.id}')">Add</button></div>
+    ${upcoming}
+    <div class="label" style="margin-top:26px">History</div>
+    <div class="history">${logs.length ? logs.map(l => `<div class="log"><span class="when">${nice(l.date)}</span><span>${TYPE_LABEL[l.type]}${l.type === 'hangout' && +l.hours ? `<span class="muted"> · ${fmtH(+l.hours)}</span>` : ''}${l.by === 'them' ? '<span class="muted"> · they reached out</span>' : ''}${l.note ? `<div class="muted small">${esc(l.note)}</div>` : ''}</span><button class="x" title="Delete" onclick="App.delLog('${l.id}','${p.id}')">&times;</button></div>`).join('')
+      : `<p class="muted small">Nothing logged yet.</p>`}</div>
+    ${!histAll && s.logs.length > logs.length ? `<button class="linkish small" style="margin-top:8px" onclick="App.moreHistory('${p.id}')">Show all ${s.logs.length}</button>` : ''}
+    <div class="foot">
+      <button class="btn btn-quiet btn-danger left" onclick="App.delPerson('${p.id}')">Delete</button>
+      <button class="btn btn-quiet" onclick="App.archive('${p.id}')">${p.archived ? 'Unarchive' : 'Archive'}</button>
+      <button class="btn" onclick="App.personForm('${p.id}')">Edit</button>
+      <button class="btn btn-primary" onclick="App.close()">Done</button>
+    </div>`;
+}
+
+/* toast */
+let toastTimer;
+function toast(msg, action, label = 'Undo') {
+  clearTimeout(toastTimer);
+  window.__toastAction = action;
+  $('#toast-root').innerHTML = `<div class="toast" role="status"><span>${msg}</span>${action ? `<button onclick="window.__toastAction&&window.__toastAction();App.hideToast()">${label}</button>` : ''}</div>`;
+  toastTimer = setTimeout(() => App.hideToast(), 6000);
+}
+
+/* actions */
+function addLog(pid, type, date, hours, note, eventId, by) {
+  const l = { id: uid(), personId: pid, type, date, hours: type === 'hangout' ? (+hours || 0) : 0, note: (note || '').trim(), ts: Date.now() };
+  if (eventId) l.eventId = eventId;
+  if (by) l.by = by;
+  state.logs.push(l);
+  return l;
+}
+function syncEventLogs(e) {
+  state.logs = state.logs.filter(l => l.eventId !== e.id);
+  if (e.done) for (const pid of e.personIds) if (person(pid)) addLog(pid, 'hangout', e.date, e.hours, e.title, e.id);
+}
+const seedFrom = v => v ? addDays(today(), -+v) : null;
+const parseGroups = s => [...new Set(s.split(',').map(x => x.trim()).filter(Boolean))];
+function newPerson(data) {
+  return { id: uid(), created: today(), skip: {}, archived: false, promotedAt: null, groups: [], followUps: [], seed: {}, ...data };
+}
+function milestoneToast(p, before, fallback) {
+  const after = stats(p).hours;
+  const crossed = MILESTONES.find(m => before < m.h && after >= m.h);
+  if (p.kind === 'acq' && before < 50 && after >= 50) { App.detail(p.id); toast(`${esc(p.name)} has reached about 50 hours. Consider promoting them to friend.`); }
+  else if (crossed && p.kind === 'friend') toast(`${esc(p.name)}: ${crossed.h}+ hours together, about ${crossed.label.toLowerCase()} level`);
+  else fallback();
+}
+function icsText(e) {
+  const escI = s => String(s || '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
+  const d = e.date.replace(/-/g, '');
+  const stamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Orbit//EN', 'BEGIN:VEVENT', `UID:${e.id}@orbit.local`, `DTSTAMP:${stamp}`];
+  if (e.time) {
+    const [h, m] = e.time.split(':').map(Number);
+    const start = new Date(...e.date.split('-').map((x, i) => i === 1 ? +x - 1 : +x), h, m);
+    const end = new Date(start.getTime() + Math.max(0.5, +e.hours || 1) * 36e5);
+    const f = x => `${fmt(x).replace(/-/g, '')}T${pad(x.getHours())}${pad(x.getMinutes())}00`;
+    lines.push(`DTSTART:${f(start)}`, `DTEND:${f(end)}`);
+  } else lines.push(`DTSTART;VALUE=DATE:${d}`, `DTEND;VALUE=DATE:${addDays(e.date, 1).replace(/-/g, '')}`);
+  const sr = seriesOf(e);
+  if (sr?.repeat) lines.push(`RRULE:${sr.repeat === 'monthly' ? 'FREQ=MONTHLY' : `FREQ=WEEKLY;INTERVAL=${sr.repeat === 'biweekly' ? 2 : 1}`}`);
+  lines.push(`SUMMARY:${escI(e.title)}`);
+  if (e.location) lines.push(`LOCATION:${escI(e.location)}`);
+  const desc = [e.personIds.length ? `With ${listNames(names(e.personIds))}` : '', e.note].filter(Boolean).join('\n');
+  if (desc) lines.push(`DESCRIPTION:${escI(desc)}`);
+  lines.push('BEGIN:VALARM', 'TRIGGER:-PT2H', 'ACTION:DISPLAY', `DESCRIPTION:${escI(e.title)}`, 'END:VALARM', 'END:VEVENT', 'END:VCALENDAR');
+  return lines.join('\r\n');
+}
+async function shareFile(name, text, type) {
+  try {
+    const file = new File([text], name, { type });
+    if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file], title: name }); return true; }
+  } catch (err) { if (err?.name === 'AbortError') return false; }
+  download(name, text, type); return true;
+}
+function download(name, text, type) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], { type }));
+  a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+const App = {
+  go(v) { view = v; showAll = false; if (v === 'calendar') calWeek = weekStart(today()); render(); window.scrollTo(0, 0); },
+  close: closeModal,
+  hideToast() { $('#toast-root').innerHTML = ''; },
+  toggleAll() { showAll = !showAll; render(); },
+  pf(k, v) { pf[k] = v; render(); },
+  search(v) { pf.q = v; render(); const q = $('#q'); q.focus(); q.setSelectionRange(v.length, v.length); },
+  calShift(n) { calWeek = n === 0 ? weekStart(today()) : addDays(calWeek, n); render(); },
+  shuffle(pid, type) { ideaShift[pid + type] = (ideaShift[pid + type] || 0) + 1; render(); },
+  moreHistory(pid) { histAll = true; openModal(detailHtml(person(pid))); },
+
+  /* people */
+  personForm(id, kind) { openModal(personFormHtml(id ? person(id) : null, kind)); App.kindToggle(); },
+  bulkForm() { openModal(bulkFormHtml()); App.kindToggle(); },
+  remoteToggle() { $('#f-loc-wrap').style.display = $('#f-remote').checked ? '' : 'none'; },
+  kindToggle() {
+    const k = document.querySelector('input[name=f-kind]:checked')?.value;
+    $('#f-tier-wrap').style.display = k === 'friend' ? '' : 'none';
+    $('#f-int-wrap').style.display = k === 'acq' ? '' : 'none';
+  },
+  savePerson(id) {
+    const name = $('#f-name').value.trim();
+    if (!name) { $('#f-name').focus(); $('#f-name').style.borderColor = 'var(--overdue)'; return; }
+    const kind = document.querySelector('input[name=f-kind]:checked').value;
+    const bm = $('#f-bmonth').value, bd = Math.round(+$('#f-bday').value);
+    const data = {
+      name, kind,
+      tier: +$('#f-tier').value, interest: +$('#f-interest').value,
+      metAt: $('#f-metAt').value.trim(), metDate: $('#f-metDate').value || null,
+      interests: $('#f-interests').value.trim(), notes: $('#f-notes').value.trim(),
+      textEvery: +$('#f-textEvery').value || null, hangEvery: +$('#f-hangEvery').value || null,
+      remote: $('#f-remote').checked, location: $('#f-remote').checked ? $('#f-location').value.trim() : '',
+      birthday: bm && bd >= 1 && bd <= 31 ? `${bm}-${pad(bd)}` : null,
+      groups: parseGroups($('#f-groups').value),
+    };
+    if (id) {
+      const p = person(id);
+      if (p.kind === 'acq' && kind === 'friend' && !p.promotedAt) p.promotedAt = today();
+      if (kind === 'acq') p.promotedAt = null;
+      Object.assign(p, data);
+    } else {
+      state.people.push(newPerson({ ...data, seed: { text: seedFrom($('#f-seedText').value), hang: seedFrom($('#f-seedHang').value) } }));
+    }
+    save(); closeModal(); render();
+    toast(id ? `Saved ${esc(name)}` : `Added ${esc(name)}`);
+    if (id) App.detail(id);
+  },
+  saveBulk() {
+    const list = [...new Set($('#b-names').value.split('\n').map(x => x.trim()).filter(Boolean))];
+    if (!list.length) { $('#b-names').focus(); return; }
+    const kind = document.querySelector('input[name=f-kind]:checked').value;
+    const base = {
+      kind, tier: +$('#f-tier').value, interest: +$('#f-interest').value, remote: $('#b-remote').checked, location: '',
+      groups: parseGroups($('#b-groups').value), metAt: '', metDate: null, interests: '', notes: '', textEvery: null, hangEvery: null, birthday: null,
+    };
+    const seed = { text: seedFrom($('#f-seedText').value), hang: seedFrom($('#f-seedHang').value) };
+    const added = list.map(name => newPerson({ ...base, name, seed: { ...seed }, groups: [...base.groups] }));
+    state.people.push(...added);
+    save(); closeModal(); render();
+    toast(`Added ${people(added.length)}`, () => { const ids = new Set(added.map(p => p.id)); state.people = state.people.filter(p => !ids.has(p.id)); save(); render(); });
+  },
+  detail(id) { histAll = false; if (person(id)) openModal(detailHtml(person(id))); },
+
+  /* logging */
+  logForm(pid, type) {
+    if (!pid && !activePeople().length) { App.personForm(); return; }
+    openModal(logFormHtml(pid, type)); App.typeToggle();
+  },
+  typeToggle() {
+    const t = document.querySelector('input[name=l-type]:checked')?.value;
+    $('#l-hours-wrap').style.visibility = t === 'hangout' ? 'visible' : 'hidden';
+  },
+  saveLog() {
+    const pid = $('#l-person').value, type = document.querySelector('input[name=l-type]:checked').value;
+    const by = document.querySelector('input[name=l-by]:checked')?.value || 'me';
+    const p = person(pid), before = stats(p).hours;
+    const l = addLog(pid, type, $('#l-date').value || today(), $('#l-hours').value, $('#l-note').value, null, by);
+    const fu = $('#l-fu').value.trim();
+    if (fu) p.followUps.push({ id: uid(), text: fu, date: $('#l-fu-date').value || null, done: false, created: today() });
+    save(); closeModal(); render();
+    milestoneToast(p, before, () => toast(type === 'hangout' ? `Logged time with ${esc(p.name)}` : `Logged ${type} with ${esc(p.name)}`, () => App.undoLog(l.id)));
+  },
+  quickLog(pid, type, fromDetail, by = 'me') {
+    const l = addLog(pid, type, today(), 0, '', null, by);
+    save(); render();
+    if (fromDetail) App.detail(pid);
+    const p = person(pid);
+    toast(by === 'them' ? `Noted that ${esc(p.name)} reached out` : `Logged ${type} with ${esc(p.name)}`, () => { App.undoLog(l.id); if (fromDetail) App.detail(pid); });
+  },
+  undoLog(lid) { state.logs = state.logs.filter(l => l.id !== lid); save(); render(); },
+  delLog(lid, pid) {
+    const l = state.logs.find(x => x.id === lid);
+    state.logs = state.logs.filter(x => x.id !== lid);
+    if (l?.eventId) { const e = getEvent(l.eventId); if (e) e.personIds = e.personIds.filter(x => x !== pid); }
+    save(); render(); App.detail(pid);
+  },
+  skip(pid, type) {
+    const p = person(pid); p.skip = p.skip || {};
+    const prev = p.skip[type];
+    p.skip[type] = weekStart(today()); save(); render();
+    toast(`Skipped ${esc(p.name)} this week`, () => { p.skip[type] = prev; save(); render(); });
+  },
+
+  /* follow-ups */
+  fuAdd(pid) {
+    const text = $('#fu-text').value.trim();
+    if (!text) { $('#fu-text').focus(); return; }
+    person(pid).followUps.push({ id: uid(), text, date: $('#fu-date').value || null, done: false, created: today() });
+    save(); render(); App.detail(pid);
+    $('#fu-text')?.focus();
+  },
+  fuDone(pid, fid, fromDetail) {
+    const f = person(pid).followUps.find(x => x.id === fid); f.done = true; f.doneAt = today();
+    save(); render(); if (fromDetail) App.detail(pid);
+    toast('Follow-up done', () => { f.done = false; save(); render(); if (fromDetail) App.detail(pid); });
+  },
+  fuDel(pid, fid) { const p = person(pid); p.followUps = p.followUps.filter(x => x.id !== fid); save(); render(); App.detail(pid); },
+
+  /* events */
+  eventForm(id, preset = {}) {
+    const e = id ? JSON.parse(JSON.stringify(getEvent(id))) : { title: preset.title || '', date: preset.date || today(), time: '', hours: 2, personIds: preset.personIds || [], location: '', note: '', done: false };
+    openModal(eventFormHtml(e));
+  },
+  planGroup(i) { const [g, ids] = groupSugs[i] || []; if (g) App.eventForm(null, { personIds: ids, title: g }); },
+  pickGroup(i) {
+    const g = allGroups()[i];
+    const boxes = $$('#e-people input');
+    const inGroup = boxes.filter(b => (person(b.value)?.groups || []).includes(g));
+    const allOn = inGroup.every(b => b.checked);
+    inGroup.forEach(b => { b.checked = !allOn; });
+  },
+  evDateChange() {
+    const d = $('#e-date').value;
+    $('#e-done-wrap').style.display = d && d <= today() ? '' : 'none';
+    if (d && d < today()) $('#e-done').checked = true;
+  },
+  saveEvent(id) {
+    const date = $('#e-date').value;
+    if (!date) { $('#e-date').style.borderColor = 'var(--overdue)'; return; }
+    const personIds = $$('#e-people input:checked').map(i => i.value);
+    let title = $('#e-title').value.trim();
+    if (!title) title = personIds.length ? `Time with ${listNames(names(personIds))}` : 'Social activity';
+    const repeat = $('#e-repeat').value;
+    const data = { title, date, time: $('#e-time').value || '', hours: Math.max(0, +$('#e-hours').value || 0), personIds, location: $('#e-location').value.trim(), note: $('#e-note').value.trim(), done: date <= today() && $('#e-done').checked };
+    let e;
+    const startSeries = ev => { const sid = uid(); ev.seriesId = sid; state.series[sid] = { repeat, lastGen: ev.date, day: parseD(ev.date).getDate(), tpl: tplOf(ev) }; };
+    const dropFuture = ev => { state.events = state.events.filter(o => !(o.seriesId === ev.seriesId && o.id !== ev.id && !o.done && o.date > ev.date)); };
+    if (id) {
+      e = getEvent(id); Object.assign(e, data);
+      const sr = seriesOf(e);
+      if (sr && sr.repeat) {
+        if (!repeat) { dropFuture(e); sr.repeat = ''; }
+        else if (repeat !== sr.repeat) { dropFuture(e); sr.repeat = ''; delete e.seriesId; startSeries(e); }
+        else {
+          sr.tpl = tplOf(e);
+          for (const o of state.events) if (o.seriesId === e.seriesId && o.id !== e.id && !o.done && o.date > e.date) { Object.assign(o, tplOf(e)); syncEventLogs(o); }
+        }
+      } else if (repeat) startSeries(e);
+    } else {
+      e = { id: uid(), ...data }; state.events.push(e);
+      if (repeat) startSeries(e);
+    }
+    syncEventLogs(e);
+    materialize(addDays(today(), 42));
+    save(); closeModal(); render();
+    if (e.done) toast(`Logged ${esc(e.title)}`);
+    else toast(`Added ${esc(e.title)} on ${wd(e.date)}`, () => App.ics(e.id), 'Add to calendar app');
+  },
+  confirmEvent(id) {
+    const e = getEvent(id); e.done = true; syncEventLogs(e); save(); render();
+    toast(`Logged ${esc(e.title)}`, () => { e.done = false; syncEventLogs(e); save(); render(); });
+  },
+  cancelEvent(id) {
+    const e = getEvent(id); state.events = state.events.filter(x => x.id !== id); save(); render();
+    toast(`Removed ${esc(e.title)}`, () => { state.events.push(e); save(); render(); });
+  },
+  deleteEvent(id, all) {
+    const e = getEvent(id);
+    if (e.done && !confirm('Delete this activity? The time together it logged will be removed too.')) return;
+    const sr = seriesOf(e);
+    const gone = new Set([id]);
+    if (all && sr) { for (const o of state.events) if (o.seriesId === e.seriesId && !o.done && o.date >= e.date) gone.add(o.id); sr.repeat = ''; }
+    state.events = state.events.filter(x => !gone.has(x.id));
+    state.logs = state.logs.filter(l => !gone.has(l.eventId));
+    save(); closeModal(); render(); toast(all ? `Deleted upcoming ${esc(e.title)}` : `Deleted ${esc(e.title)}`);
+  },
+  ics(id) { const e = getEvent(id); if (e) download(`${e.title.replace(/[^\w\- ]+/g, '').trim() || 'plan'}.ics`, icsText(e), 'text/calendar'); },
+
+  /* tiers */
+  promoteForm(pid) {
+    const p = person(pid);
+    openModal(`<h2>Promote ${esc(p.name)}</h2>
+      <p class="sub">They'll keep a "grew from acquaintance" tag so you remember where it started.</p>
+      <div class="field"><label>Friend tier</label><select id="pr-tier">${Object.entries(LEVELS.friend).map(([l, L]) => `<option value="${l}" ${+l === 4 ? 'selected' : ''}>${L.label}: ${esc(L.hint)}</option>`).join('')}</select>
+      <span class="hint">Most new friendships start as casual or good friends.</span></div>
+      <div class="foot"><button class="btn btn-quiet" onclick="App.detail('${pid}')">Back</button><button class="btn btn-primary" onclick="App.promote('${pid}')">Promote</button></div>`);
+  },
+  promote(pid) {
+    const p = person(pid);
+    p.kind = 'friend'; p.tier = +$('#pr-tier').value; p.promotedAt = today();
+    save(); render(); App.detail(pid);
+    toast(`${esc(p.name)} is now a friend`);
+  },
+  applyTier(pid, action, to) {
+    const p = person(pid);
+    if (action === 'archive') { App.archive(pid); return; }
+    const prev = p.tier; p.tier = to; save(); render();
+    toast(`${esc(p.name)} is now a ${LEVELS.friend[to].label.toLowerCase()}`, () => { p.tier = prev; save(); render(); });
+  },
+  dismissTier(pid) { state.settings.tierDismiss[pid] = today(); save(); render(); },
+  archive(pid) {
+    const p = person(pid); p.archived = !p.archived; save(); closeModal(); render();
+    toast(p.archived ? `Archived ${esc(p.name)}` : `Unarchived ${esc(p.name)}`, () => { p.archived = !p.archived; save(); render(); });
+  },
+  delPerson(pid) {
+    const p = person(pid);
+    if (!confirm(`Delete ${p.name} and all their history? This can't be undone. Archiving hides them instead.`)) return;
+    state.people = state.people.filter(x => x.id !== pid);
+    state.logs = state.logs.filter(l => l.personId !== pid);
+    for (const e of state.events) e.personIds = e.personIds.filter(x => x !== pid);
+    for (const sr of Object.values(state.series)) sr.tpl.personIds = sr.tpl.personIds.filter(x => x !== pid);
+    save(); closeModal(); render(); toast(`Deleted ${esc(p.name)}`);
+  },
+
+  /* settings & data */
+  setIv(k, l, t, v) { state.settings.intervals[k][l][t] = Math.max(1, Math.round(+v || 1)); save(); renderNav(); },
+  resetIv() { state.settings.intervals = defaultIntervals(); save(); render(); toast('Cadences reset to defaults'); },
+  setCap(t, v) { state.settings.weekCaps[t] = Math.max(1, Math.round(+v || 1)); save(); renderNav(); },
+  snoozeBackup() { state.settings.backupSnooze = today(); save(); render(); },
+  async exportData() {
+    const okd = await shareFile(`orbit-backup-${today()}.json`, JSON.stringify(state, null, 2), 'application/json');
+    if (!okd) return;
+    state.settings.lastBackup = today(); save(); render();
+    toast('Backup saved. Keep it somewhere safe, like iCloud Drive.');
+  },
+  dismissInstall() { state.settings.installDismissed = true; save(); render(); },
+  async install() { if (!installPrompt) return; installPrompt.prompt(); await installPrompt.userChoice.catch(() => {}); installPrompt = null; render(); },
+  importData(file) {
+    if (!file) return;
+    const r = new FileReader();
+    r.onload = () => {
+      try {
+        const d = JSON.parse(r.result);
+        if (!Array.isArray(d.people) || !Array.isArray(d.logs)) throw 0;
+        if (!confirm(`Replace your current data with this backup (${d.people.length} people, ${d.logs.length} interactions)?`)) return;
+        localStorage.setItem(KEY, JSON.stringify(d)); state = load(); save(); render(); toast('Backup imported');
+      } catch { alert(`That file doesn't look like an Orbit backup.`); }
+    };
+    r.readAsText(file);
+  },
+  wipe() { if (confirm('Erase all people, plans and history? Export a backup first if you might want it.')) { state = freshState(); save(); render(); } },
+  loadSample() {
+    if (state.people.length && !confirm('Add sample people alongside your existing data?')) return;
+    const t = today(), d = n => addDays(t, -n);
+    const ids = {};
+    const mk = (key, name, kind, lv, extra, logs) => {
+      const p = newPerson({ name, kind, tier: kind === 'friend' ? lv : 3, interest: kind === 'acq' ? lv : 1, created: d(120), metAt: '', metDate: null, interests: '', notes: '', textEvery: null, hangEvery: null, birthday: null, ...extra });
+      state.people.push(p); ids[key] = p.id;
+      for (const [type, n, hours, note, by] of logs) state.logs.push({ id: uid(), personId: p.id, type, date: d(n), hours: hours || 0, note: note || '', by: by || 'me', ts: Date.now() - n });
+      return p;
+    };
+    const soonBday = addDays(t, 3).slice(5);
+    const jordan = mk('jordan', 'Jordan (sample)', 'friend', 1, { interests: 'basketball, cooking', notes: 'Roommate from sophomore year', groups: ['College'] }, [['text', 4, 0, '', 'them'], ['hangout', 12, 3, 'Talked about their job search']]);
+    jordan.followUps.push({ id: uid(), text: 'Ask how the final-round interview went', date: addDays(t, 1), done: false, created: d(12) });
+    mk('priya', 'Priya (sample)', 'friend', 2, { interests: 'F1, travel', birthday: soonBday }, [['text', 2], ['hangout', 16, 2.5]]);
+    mk('marcus', 'Marcus (sample)', 'friend', 3, { interests: 'running, film', groups: ['College'] }, [['text', 20], ['hangout', 70, 4, 'Training for a half marathon']]);
+    mk('taylor', 'Taylor (sample)', 'friend', 4, { groups: ['College'] }, [['text', 40], ['text', 75], ['text', 110], ['text', 140], ['text', 170], ['hangout', 150, 2]]);
+    mk('alex', 'Alex (sample)', 'friend', 2, { remote: true, location: 'Chicago', interests: 'NBA, new job' }, [['text', 9], ['call', 24, 0, '', 'them'], ['hangout', 200, 20, 'Visited over the summer']]);
+    mk('sam', 'Sam (sample)', 'acq', 1, { metAt: 'Climbing gym', metDate: d(35), interests: 'bouldering, indie music', groups: ['Climbing'] }, [['hangout', 35, 1.5, 'Wants to try the outdoor spot'], ['text', 30], ['hangout', 21, 3], ['hangout', 13, 2.5], ['text', 9, 0, '', 'them']]);
+    mk('riley', 'Riley (sample)', 'acq', 2, { metAt: `Priya's birthday`, metDate: d(25), interests: 'board games' }, [['hangout', 25, 3, 'Mentioned a game night']]);
+    mk('chris', 'Chris (sample)', 'friend', 3, { metAt: 'Work', promotedAt: d(10) }, [['hangout', 80, 10], ['hangout', 60, 15], ['hangout', 40, 12], ['hangout', 25, 8], ['hangout', 11, 6], ['text', 3]]);
+    const climb = { id: uid(), title: 'Climbing', date: addDays(t, 2), time: '18:30', hours: 2, personIds: [ids.sam], location: 'Bouldering gym', note: '', done: false };
+    const sid = uid(); climb.seriesId = sid;
+    state.series[sid] = { repeat: 'weekly', lastGen: climb.date, day: parseD(climb.date).getDate(), tpl: tplOf(climb) };
+    state.events.push(climb);
+    state.events.push({ id: uid(), title: 'Game night', date: addDays(t, 4), time: '19:00', hours: 3, personIds: [ids.riley, ids.priya], location: '', note: '', done: false });
+    save(); render(); toast('Sample data loaded');
+  },
+};
+
+// keep dates fresh if the page stays open overnight or in a background tab
+let renderedDay = today();
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { renderedDay = today(); render(); } });
+setInterval(() => { if (today() !== renderedDay) { renderedDay = today(); render(); } }, 60000);
+try { navigator.storage?.persist?.(); } catch {}
+if (isHosted() && 'serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installPrompt = e; render(); });
+window.addEventListener('appinstalled', () => { installPrompt = null; render(); });
+
+render();
+</script>
+</body>
+</html>
