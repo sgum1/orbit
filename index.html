@@ -329,6 +329,26 @@ details[open] summary:before{content:"– "}
 .ring{width:18px;height:18px;border-radius:50%;border:1.5px dashed var(--due)}
 .ev.bday{background:transparent;border:1px dashed var(--due)}
 .ev.bday b{font-weight:500}
+/* type-to-search person picker */
+.combo-box{display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-height:38px;padding:4px 6px;border:1px solid var(--line);border-radius:8px;background:var(--surface);cursor:text;transition:border-color .15s}
+.combo-box:focus-within{border-color:var(--ink)}
+.combo-box.invalid{border-color:var(--overdue)}
+.combo-box input{border:0!important;outline:0;flex:1;min-width:110px;width:auto;height:28px;padding:0 5px;background:transparent}
+.chip{display:inline-flex;align-items:center;gap:2px;background:var(--ink);color:var(--bg);border-radius:999px;padding:3px 4px 3px 11px;font-size:13px;line-height:1.4;max-width:100%}
+.chip.acq{background:var(--acq);color:#fff}
+.chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip button{background:none;border:0;color:inherit;opacity:.65;font-size:16px;line-height:1;padding:0 5px;cursor:pointer}
+.chip button:hover{opacity:1}
+.combo-list{margin-top:6px;border:1px solid var(--line);border-radius:10px;background:var(--surface);max-height:264px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.combo-list:empty{display:none}
+.combo-head{padding:8px 12px 4px;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);font-weight:600}
+.combo-opt{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:10px 12px;cursor:pointer;font-size:14px}
+.combo-opt + .combo-opt{border-top:1px solid var(--line)}
+.combo-opt.on{background:var(--hover)}
+.combo-opt mark{background:none;color:inherit;font-weight:650}
+.combo-opt.acq .nm{color:var(--acq)}
+.combo-opt .who-meta{color:var(--muted);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.combo-empty{padding:10px 12px;font-size:13.5px;color:var(--muted)}
 .group-links{font-size:12.5px;color:var(--muted);margin-bottom:6px}
 .group-links .linkish{margin-left:8px;font-size:12.5px}
 .inline-add{display:grid;grid-template-columns:1fr 150px auto;gap:8px;margin-top:10px}
@@ -447,6 +467,10 @@ body:not([data-view=week]):not([data-view=calendar]):not([data-view=people]) .fa
   .panel-top .label{flex-basis:100%}
   .three{grid-template-columns:1.25fr 1fr .7fr;gap:8px}
   .three input{padding:8px 9px}
+  .combo-box{min-height:44px;padding:5px 7px}
+  .combo-box input{height:32px;font-size:16px}
+  .chip{font-size:14px;padding:5px 5px 5px 12px}
+  .combo-opt{padding:13px 12px;font-size:15px}
 }
 </style>
 </head>
@@ -1408,11 +1432,9 @@ function bulkFormHtml() {
 }
 
 function logFormHtml(pid, type) {
-  const ppl = activePeople().slice().sort((a, b) => a.name.localeCompare(b.name));
   type = type || 'hangout';
   return `<h2>Log interaction</h2>
-  <div class="field"><label>With</label>${pid ? `<input disabled value="${esc(person(pid).name)}"><input type="hidden" id="l-person" value="${pid}">`
-    : `<select id="l-person">${ppl.map(p => `<option value="${p.id}">${esc(p.name)}${p.kind === 'acq' ? ' (acquaintance)' : ''}</option>`).join('')}</select>`}</div>
+  <div class="field"><label>With</label>${comboHtml(!pid)}</div>
   <div class="field"><label>Type</label><div class="choice">
     ${[['text', 'Text'], ['call', 'Call'], ['hangout', 'In person']].map(([v, l]) =>
       `<label><input type="radio" name="l-type" value="${v}" ${type === v ? 'checked' : ''} onchange="App.typeToggle()"><span>${l}</span></label>`).join('')}
@@ -1438,8 +1460,6 @@ function logFormHtml(pid, type) {
 
 function eventFormHtml(e) {
   const isNew = !e.id;
-  const ppl = activePeople().slice().sort((a, b) => (a.kind === b.kind ? 0 : a.kind === 'friend' ? -1 : 1) || a.name.localeCompare(b.name));
-  for (const id of e.personIds) if (!ppl.find(p => p.id === id) && person(id)) ppl.push(person(id));
   const past = e.date <= today();
   const sr = seriesOf(e);
   const repeat = sr?.repeat || '';
@@ -1455,9 +1475,8 @@ function eventFormHtml(e) {
   <div class="field"><label>Repeats</label><select id="e-repeat">${Object.entries(REPEAT_LABEL).map(([v, l]) => `<option value="${v}" ${repeat === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
     ${sr?.repeat ? `<span class="hint">Changes apply to this and upcoming repeats.</span>` : `<span class="hint">A standing plan means no re-planning.</span>`}</div>
   <div class="field"><label>Who</label>
-    ${groups.length && ppl.length ? `<div class="group-links">Select a group:${groups.map((g, i) => ` <button type="button" class="linkish" onclick="App.pickGroup(${i})">${esc(g)}</button>`).join('')}</div>` : ''}
-    ${ppl.length ? `<div class="picker" id="e-people">${ppl.map(p => `<label class="pick ${p.kind === 'acq' ? 'acq' : ''}" title="${p.kind === 'acq' ? 'Acquaintance' : esc(levelInfo(p).label)}"><input type="checkbox" value="${p.id}" ${e.personIds.includes(p.id) ? 'checked' : ''}>${esc(p.name)}</label>`).join('')}</div>
-    <span class="hint">Green names are acquaintances.</span>` : `<span class="hint">Add people first to tag them here.</span>`}
+    ${activePeople().length ? `${comboHtml(false)}
+    ${groups.length ? `<div class="group-links" style="margin:8px 0 0">Add a group:${groups.map((g, i) => ` <button type="button" class="linkish" onclick="App.pickGroup(${i})">${esc(g)}</button>`).join('')}</div>` : ''}` : `<span class="hint">Add people first to tag them here.</span>`}
   </div>
   <div class="field"><label>Where</label><input id="e-location" value="${esc(e.location || '')}" placeholder="Optional"></div>
   <div class="field"><label>Notes</label><textarea id="e-note" placeholder="Optional">${esc(e.note || '')}</textarea></div>
@@ -1468,6 +1487,71 @@ function eventFormHtml(e) {
     <button class="btn btn-quiet" onclick="App.close()">Cancel</button>
     <button class="btn btn-primary" onclick="App.saveEvent(${isNew ? 'null' : `'${e.id}'`})">${isNew ? 'Add to calendar' : 'Save'}</button>
   </div>`;
+}
+
+/* Type-to-search person picker. 'multi' keeps a list of chips; 'single' holds one person. */
+const combo = { mode: 'multi', ids: [], q: '', active: 0, open: false, matches: [] };
+function comboReset(mode, ids) { Object.assign(combo, { mode, ids: [...new Set(ids || [])].filter(id => person(id)), q: '', active: 0, open: false, matches: [] }); }
+function comboHtml(autofocus) {
+  return `<div class="combo" id="combo">
+    <div class="combo-box" id="combo-box" onclick="if(event.target===this)$('#combo-input').focus()">
+      <span id="combo-chips" style="display:contents">${comboChipsHtml()}</span>
+      <input id="combo-input" type="text" autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false" enterkeyhint="done"
+        role="combobox" aria-expanded="false" aria-controls="combo-list" aria-autocomplete="list"
+        placeholder="${comboPlaceholder()}" ${autofocus ? 'autofocus' : ''} style="${combo.mode === 'single' && combo.ids.length ? 'display:none' : ''}"
+        oninput="App.comboInput(this.value)" onfocus="App.comboFocus()" onblur="App.comboBlur()" onkeydown="App.comboKey(event)">
+    </div>
+    <div class="combo-list" id="combo-list" role="listbox"></div>
+  </div>`;
+}
+const comboPlaceholder = () => combo.mode === 'single' ? 'Type a name' : combo.ids.length ? 'Add someone else' : 'Type a name or a group';
+function comboChipsHtml() {
+  return combo.ids.map(id => { const p = person(id); return `<span class="chip ${p.kind === 'acq' ? 'acq' : ''}" title="${p.kind === 'acq' ? 'Acquaintance' : esc(levelInfo(p).label)}"><span>${esc(p.name)}</span><button type="button" aria-label="Remove ${esc(p.name)}" onmousedown="event.preventDefault()" onclick="App.comboRemove('${id}')">&times;</button></span>`; }).join('');
+}
+function comboFind(q) {
+  const pool = activePeople().filter(p => !combo.ids.includes(p.id));
+  q = q.trim().toLowerCase();
+  if (!q) {
+    // nothing typed yet: suggest whoever is most due
+    return pool.map(p => { const s = stats(p); return { p, k: Math.max(s.tScore, s.hScore) }; }).sort((a, b) => b.k - a.k).slice(0, 6).map(x => ({ p: x.p }));
+  }
+  const out = [];
+  for (const p of pool) {
+    const n = p.name.toLowerCase();
+    let rank = n.startsWith(q) ? 0 : n.split(/\s+/).some(w => w.startsWith(q)) ? 1 : n.includes(q) ? 2 : -1;
+    let via = '';
+    if (rank < 0 && combo.mode === 'multi') { const g = (p.groups || []).find(g => g.toLowerCase().startsWith(q)); if (g) { rank = 3; via = g; } }
+    if (rank >= 0) out.push({ p, rank, via });
+  }
+  return out.sort((a, b) => a.rank - b.rank || a.p.name.localeCompare(b.p.name)).slice(0, 8);
+}
+function comboMark(name, q) {
+  q = q.trim();
+  const i = q ? name.toLowerCase().indexOf(q.toLowerCase()) : -1;
+  return i < 0 ? esc(name) : `${esc(name.slice(0, i))}<mark>${esc(name.slice(i, i + q.length))}</mark>${esc(name.slice(i + q.length))}`;
+}
+function comboRender() {
+  const list = $('#combo-list'), input = $('#combo-input');
+  if (!list) return;
+  $('#combo-chips').innerHTML = comboChipsHtml();
+  if (input) {
+    input.style.display = combo.mode === 'single' && combo.ids.length ? 'none' : '';
+    input.placeholder = comboPlaceholder();
+    input.setAttribute?.('aria-expanded', combo.open ? 'true' : 'false');
+  }
+  if (!combo.open) { list.innerHTML = ''; return; }
+  combo.matches = comboFind(combo.q);
+  combo.active = Math.min(combo.active, Math.max(0, combo.matches.length - 1));
+  if (!combo.matches.length) {
+    list.innerHTML = combo.q.trim() ? `<div class="combo-empty">No one matches "${esc(combo.q.trim())}". Add them from People first.</div>` : '';
+    return;
+  }
+  list.innerHTML = (combo.q.trim() ? '' : '<div class="combo-head">Most due</div>') + combo.matches.map(({ p, via }, i) => {
+    const info = via ? `in ${via}` : p.kind === 'acq' ? 'Acquaintance' : levelInfo(p).label + (p.remote ? ' · long distance' : '');
+    return `<div class="combo-opt ${p.kind === 'acq' ? 'acq' : ''} ${i === combo.active ? 'on' : ''}" role="option" aria-selected="${i === combo.active}"
+      onmousedown="event.preventDefault()" onclick="App.comboPick('${p.id}')" onmousemove="App.comboHover(${i})">
+      <span class="nm">${comboMark(p.name, combo.q)}</span><span class="who-meta">${esc(info)}</span></div>`;
+  }).join('');
 }
 
 function detailHtml(p) {
@@ -1682,6 +1766,7 @@ const App = {
   /* logging */
   logForm(pid, type) {
     if (!pid && !activePeople().length) { App.personForm(); return; }
+    comboReset('single', pid ? [pid] : []);
     openModal(logFormHtml(pid, type)); App.typeToggle();
   },
   typeToggle() {
@@ -1689,7 +1774,9 @@ const App = {
     $('#l-hours-wrap').style.visibility = t === 'hangout' ? 'visible' : 'hidden';
   },
   saveLog() {
-    const pid = $('#l-person').value, type = document.querySelector('input[name=l-type]:checked').value;
+    const pid = combo.ids[0];
+    if (!pid || !person(pid)) { $('#combo-box').classList.add('invalid'); $('#combo-input').focus(); return; }
+    const type = document.querySelector('input[name=l-type]:checked').value;
     const by = document.querySelector('input[name=l-by]:checked')?.value || 'me';
     const p = person(pid), before = stats(p).hours;
     const l = addLog(pid, type, $('#l-date').value || today(), $('#l-hours').value, $('#l-note').value, null, by);
@@ -1737,15 +1824,47 @@ const App = {
   /* events */
   eventForm(id, preset = {}) {
     const e = id ? JSON.parse(JSON.stringify(getEvent(id))) : { title: preset.title || '', date: preset.date || today(), time: '', hours: 2, personIds: preset.personIds || [], location: '', note: '', done: false };
+    comboReset('multi', e.personIds);
     openModal(eventFormHtml(e));
   },
   planGroup(i) { const [g, ids] = groupSugs[i] || []; if (g) App.eventForm(null, { personIds: ids, title: g }); },
   pickGroup(i) {
     const g = allGroups()[i];
-    const boxes = $$('#e-people input');
-    const inGroup = boxes.filter(b => (person(b.value)?.groups || []).includes(g));
-    const allOn = inGroup.every(b => b.checked);
-    inGroup.forEach(b => { b.checked = !allOn; });
+    const members = activePeople().filter(p => (p.groups || []).includes(g)).map(p => p.id);
+    const allIn = members.every(id => combo.ids.includes(id));
+    combo.ids = allIn ? combo.ids.filter(id => !members.includes(id)) : [...new Set([...combo.ids, ...members])];
+    comboRender();
+  },
+
+  /* person picker */
+  comboFocus() { combo.open = true; combo.active = 0; comboRender(); },
+  comboBlur() { setTimeout(() => { if (document.activeElement?.id !== 'combo-input') { combo.open = false; comboRender(); } }, 200); },
+  comboInput(v) { combo.q = v; combo.open = true; combo.active = 0; $('#combo-box')?.classList.remove('invalid'); comboRender(); },
+  comboHover(i) { if (combo.active !== i) { combo.active = i; comboRender(); } },
+  comboPick(id) {
+    combo.ids = combo.mode === 'single' ? [id] : [...new Set([...combo.ids, id])];
+    combo.q = ''; combo.active = 0;
+    const input = $('#combo-input');
+    if (input) input.value = '';
+    $('#combo-box')?.classList.remove('invalid');
+    if (combo.mode === 'single') { combo.open = false; comboRender(); }
+    else { combo.open = true; comboRender(); input?.focus(); }
+  },
+  comboRemove(id) {
+    combo.ids = combo.ids.filter(x => x !== id);
+    comboRender();
+    const input = $('#combo-input'); if (input) { input.value = ''; combo.q = ''; input.focus(); }
+  },
+  comboKey(e) {
+    const n = combo.matches.length;
+    if (e.key === 'ArrowDown') { e.preventDefault(); combo.open = true; combo.active = n ? (combo.active + 1) % n : 0; comboRender(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); combo.active = n ? (combo.active - 1 + n) % n : 0; comboRender(); }
+    else if (e.key === 'Enter' || (e.key === 'Tab' && combo.q.trim() && n)) {
+      if (combo.open && n) { e.preventDefault(); App.comboPick(combo.matches[combo.active].p.id); }
+      else if (e.key === 'Enter') e.preventDefault();
+    }
+    else if (e.key === 'Escape' && combo.open) { e.preventDefault(); e.stopPropagation(); combo.open = false; comboRender(); }
+    else if (e.key === 'Backspace' && !e.target.value && combo.ids.length && combo.mode === 'multi') { combo.ids = combo.ids.slice(0, -1); comboRender(); }
   },
   evDateChange() {
     const d = $('#e-date').value;
@@ -1755,7 +1874,7 @@ const App = {
   saveEvent(id) {
     const date = $('#e-date').value;
     if (!date) { $('#e-date').style.borderColor = 'var(--overdue)'; return; }
-    const personIds = $$('#e-people input:checked').map(i => i.value);
+    const personIds = combo.ids.filter(id => person(id));
     let title = $('#e-title').value.trim();
     if (!title) title = personIds.length ? `Time with ${listNames(names(personIds))}` : 'Social activity';
     const repeat = $('#e-repeat').value;
