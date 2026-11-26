@@ -306,7 +306,6 @@ details[open] summary:before{content:"– "}
   .search{max-width:none;flex:1 1 100%}
   .day-add{padding:10px}
   .ev{padding:10px}
-  .another{font-size:13px;display:inline-block;margin:6px 0 0}
   .entry{grid-template-columns:1fr}
 }
 
@@ -356,8 +355,8 @@ details[open] summary:before{content:"– "}
 .group-links .linkish{margin-left:8px;font-size:12.5px}
 .inline-add{display:grid;grid-template-columns:1fr 150px auto;gap:8px;margin-top:10px}
 .inline-add input{height:34px}
-.another{background:none;border:0;padding:0;margin-left:6px;font-size:12px;color:var(--faint);cursor:pointer;text-decoration:underline;text-underline-offset:3px;white-space:nowrap}
-.another:hover{color:var(--ink)}
+.card-notes{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.card-notes .note:first-child{margin-top:0}
 .log.fu{grid-template-columns:18px 1fr 20px;align-items:center}
 .bday-fields{display:grid;grid-template-columns:1.3fr 1fr;gap:8px}
 .facts div:last-child:nth-child(odd){border-right:0}
@@ -520,48 +519,6 @@ const REPEAT_LABEL = { '': 'Does not repeat', weekly: 'Every week', biweekly: 'E
 const APPROX = [['', 'Not sure'], ['3', 'This week'], ['14', 'A couple of weeks ago'], ['30', 'About a month ago'], ['75', '2 to 3 months ago'], ['180', 'About 6 months ago'], ['365', 'A year or more']];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-const IDEAS = {
-  friendText: [
-    'Send something that reminded you of them: a song, a post, an article.',
-    `Ask a specific question about their week. Specific beats "wyd".`,
-    'Share a small win or a funny moment from your day.',
-    'Bring up an inside joke or a memory you share.',
-    'Check in on something going on in their life (work, family, a trip).',
-    `Tell them something you appreciate about them. It lands better than you'd think.`,
-    'Float a low-effort plan: coffee, a walk, the gym.',
-  ],
-  acqText: [
-    'Follow up on something they mentioned when you met. It shows you listened.',
-    'Send something related to what you talked about. Easy, no pressure.',
-    `Invite them to something you're already doing, like a group dinner or a run club.`,
-    'Ask for a recommendation in something they know about.',
-    'Keep it light and specific. They probably liked you more than you think.',
-  ],
-  remoteText: [
-    'Set up a call or FaceTime. Hearing their voice feels a lot closer than text.',
-    'Send something that reminded you of them, and ask what their weekends look like now.',
-    'Ask about the people and places in their life there. Keep up with the details.',
-    `Share something about your new place, then ask what you're missing back home.`,
-    'Float a visit, even a loose one. Something on the calendar keeps it real.',
-    'Watch or play something together online, or start a show at the same time.',
-    'Send a voice memo instead of a text. It feels more personal.',
-  ],
-  friendHang: [
-    'Try something new together. New experiences build closeness.',
-    'Set up a recurring plan so you stop having to reschedule.',
-    'Cook or get food together. Long, unhurried time makes for the best conversations.',
-    'Run errands or work out together. Ordinary time counts too.',
-    'Plan a day trip or a show, something to look forward to.',
-  ],
-  acqHang: [
-    'Keep it low-pressure and activity-based: coffee, a walk, climbing, trivia.',
-    'Invite them along to a group plan. An easier yes, and more hours together.',
-    'Suggest something recurring. Seeing someone regularly builds liking.',
-    'Go a little deeper than last time. Opening up gradually, on both sides, builds closeness.',
-    'Time together in the first few months matters most. Prioritise this one.',
-  ],
-};
-
 /* utils */
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -681,7 +638,6 @@ let pf = { q: '', kind: 'all', sort: 'urgency', group: '' };
 let showAll = false;
 let calWeek = weekStart(today());
 let histAll = false;
-const ideaShift = {};
 let groupSugs = [];
 
 const person = id => state.people.find(p => p.id === id);
@@ -869,16 +825,6 @@ function dueStatus(due) {
   if (rem === 0) return status('due', 'Due today');
   return status('soon', `By ${wd(due)}`);
 }
-function ideaFor(p, type, idx) {
-  const set = p.remote && type === 'text' ? IDEAS.remoteText
-    : p.kind === 'acq' ? (type === 'hang' ? IDEAS.acqHang : IDEAS.acqText) : (type === 'hang' ? IDEAS.friendHang : IDEAS.friendText);
-  // with a card position, rotate from a weekly starting point so neighbouring cards never repeat
-  const base = idx == null ? hash(p.id + weekStart(today()) + type) : hash(weekStart(today()) + type) + idx;
-  return set[(base + (ideaShift[p.id + type] || 0)) % set.length];
-}
-function ideaHtml(p, type, idx) {
-  return `<p class="idea">${esc(ideaFor(p, type, idx))} <button class="another" onclick="App.shuffle('${p.id}','${type}')">Another idea</button></p>`;
-}
 function extraLines(p, s, ws, we) {
   let h = '';
   const b = p.birthday && nextBirthday(p, ws);
@@ -991,7 +937,7 @@ function renderWeek() {
       <div class="grow"><b>${esc(g)}</b> <span class="muted">${esc(listNames(names(ids)))} are all due. One plan together covers everyone.</span></div>
       <button class="btn btn-sm" onclick="App.planGroup(${i})">Plan together</button></div>`).join('')}</div>`;
     h += `<div class="cards">`;
-    for (const [ci, it] of plan.see.entries()) {
+    for (const it of plan.see) {
       const { p } = it, s = stats(p);
       const e = it.planned;
       let st, body, actions = '';
@@ -1010,7 +956,8 @@ function renderWeek() {
         actions = `<button class="btn btn-sm" onclick="App.eventForm('${e.id}')">View plan</button>`;
       } else {
         st = dueStatus(it.due);
-        body = ideaHtml(p, 'hang', ci) + extraLines(p, s, ws, plan.we);
+        const notes = extraLines(p, s, ws, plan.we);
+        body = notes ? `<div class="card-notes">${notes}</div>` : '';
         actions = `<button class="btn btn-primary btn-sm" onclick="App.eventForm(null,{personIds:['${p.id}']})">Schedule</button>
           <button class="btn btn-sm" onclick="App.logForm('${p.id}','hangout')">Log time together</button>
           <button class="btn btn-quiet btn-sm" onclick="App.skip('${p.id}','hang')">Skip this week</button>`;
@@ -1026,13 +973,13 @@ function renderWeek() {
 
   if (plan.text.length) {
     h += `<div class="section"><div class="eyebrow">Check in<span>${plan.text.filter(x => x.done).length}/${plan.text.length}</span></div><div class="section-note">A short message is enough</div></div><div class="cards">`;
-    for (const [ci, it] of plan.text.entries()) {
+    for (const it of plan.text) {
       const { p } = it, s = stats(p);
       const st = it.done ? status('good', 'Done') : it.times > 1 ? status(it.count ? 'soon' : 'due', `${it.count} of ${it.times} this week`) : dueStatus(it.due);
       h += `<article class="card ${it.done ? 'is-done' : ''}">
         <div class="card-top"><button class="name" onclick="App.detail('${p.id}')">${esc(p.name)}</button>${st}</div>
         ${meta(p, [p.remote && p.location ? p.location : '', s.lastAny ? `last contact ${ago(since(s.lastAny))}` : 'no contact yet'])}
-        ${it.done ? `<p class="idea">In touch ${s.lastAny ? wd(s.lastAny) : ''}.</p>` : `${ideaHtml(p, 'text', ci)}${extraLines(p, s, ws, plan.we)}
+        ${it.done ? `<p class="idea">In touch ${s.lastAny ? wd(s.lastAny) : ''}.</p>` : `${(n => n ? `<div class="card-notes">${n}</div>` : '')(extraLines(p, s, ws, plan.we))}
         <div class="actions">
           <button class="btn btn-primary btn-sm" onclick="App.quickLog('${p.id}','text')">Texted</button>
           <button class="btn btn-sm" onclick="App.quickLog('${p.id}','call')">Called</button>
@@ -1285,11 +1232,11 @@ function renderScience() {
       `Gollwitzer (1999), American Psychologist. Gollwitzer and Sheeran (2006), Advances in Experimental Social Psychology.`],
     [`They like you more than you think`,
       `After a conversation, people consistently underestimate how much the other person liked them. This "liking gap" stops a lot of potential friendships from going anywhere.`,
-      `Suggestions for acquaintances push you to follow up. The odds are better than they feel.`,
+      `Acquaintances get frequent check-in reminders so you actually follow up. The odds are better than they feel.`,
       `Boothby, Cooney, Sandstrom and Clark (2018), Psychological Science.`],
     [`Reaching out means more than you'd guess`,
       `People underestimate how much others appreciate a check-in, and the effect is biggest when the message comes out of the blue.`,
-      `Check-in suggestions are low-effort on purpose. You don't need a reason to send one.`,
+      `A check-in only needs a short message. You don't need a reason to send one.`,
       `Liu, Rim, Min and Min (2023), Journal of Personality and Social Psychology.`],
     [`Liking is mutual`,
       `People tend to like those who seem to like them back, and acting warmly because you believe someone likes you tends to make it true. Friendships last when effort flows both ways.`,
@@ -1301,7 +1248,7 @@ function renderScience() {
       `Sherman, Michikyan and Greenfield (2013), Cyberpsychology.`],
     [`Keeping long-distance friendships`,
       `Moving away is one of the most common reasons friendships fade, mostly because it removes time in person. Staying in regular contact slows the drift, and the format matters: people feel more bonded on a voice or video call than over text.`,
-      `Long-distance friends only get check-ins, never suggestions to meet up. Their prompts often suggest a call or a voice memo, and visits still count as time together when you log them.`,
+      `Long-distance friends only get check-ins, never suggestions to meet up. A call now and then goes further than texts alone, and visits still count as time together when you log them.`,
       `Roberts and Dunbar (2011), Evolution and Human Behavior. Sherman, Michikyan and Greenfield (2013), Cyberpsychology.`],
     [`What keeps friendships going`,
       `Four behaviours predict lasting friendships: <b>positivity</b>, <b>supportiveness</b>, <b>openness</b>, and actually spending time together. Remembering what's going on in someone's life is a big part of being supportive.`,
@@ -1743,7 +1690,6 @@ const App = {
       ${item('App.bulkForm()', 'Add several people', 'Paste a list of names')}
     </div>`);
   },
-  shuffle(pid, type) { ideaShift[pid + type] = (ideaShift[pid + type] || 0) + 1; render(); },
   moreHistory(pid) { histAll = true; openModal(detailHtml(person(pid))); },
 
   /* people */
