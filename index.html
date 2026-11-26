@@ -349,6 +349,9 @@ details[open] summary:before{content:"– "}
 .combo-opt.acq .nm{color:var(--acq)}
 .combo-opt .who-meta{color:var(--muted);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .combo-empty{padding:10px 12px;font-size:13.5px;color:var(--muted)}
+.chip.group{background:var(--hover);color:var(--ink);border:1px solid var(--line)}
+.combo-opt.create .nm{color:var(--ink)}
+.combo-opt.create .nm b{font-weight:650}
 .group-links{font-size:12.5px;color:var(--muted);margin-bottom:6px}
 .group-links .linkish{margin-left:8px;font-size:12.5px}
 .inline-add{display:grid;grid-template-columns:1fr 150px auto;gap:8px;margin-top:10px}
@@ -1380,10 +1383,10 @@ function personFormHtml(p, kindDefault) {
   const isNew = !p;
   p = p || { kind: kindDefault || 'friend', tier: 3, interest: 1, groups: [] };
   const [bm, bd] = p.birthday ? p.birthday.split('-') : ['', ''];
-  const groups = allGroups();
   return `<h2>${isNew ? 'Add a person' : 'Edit ' + esc(p.name)}</h2>
   <div class="field"><label>Name</label><input id="f-name" value="${esc(p.name || '')}" autofocus></div>
   ${kindFields(p)}
+  <div class="field"><label>Groups</label>${gtagHtml()}<span class="hint">Add as many as fit, like College, Work, Climbing.</span></div>
   <label class="check"><input type="checkbox" id="f-remote" ${p.remote ? 'checked' : ''} onchange="App.remoteToggle()"><span>Long distance<small>Check-ins only. No suggestions to meet up in person, but you can still log visits.</small></span></label>
   <div class="field" id="f-loc-wrap" style="${p.remote ? '' : 'display:none'}"><label>Where they live</label><input id="f-location" value="${esc(p.location || '')}" placeholder="Optional, e.g. Chicago"></div>
   ${isNew ? `<div class="two">
@@ -1394,13 +1397,9 @@ function personFormHtml(p, kindDefault) {
     <div class="field"><label>Birthday</label><div class="bday-fields">
       <select id="f-bmonth"><option value="">Month</option>${MONTHS.map((m, i) => `<option value="${pad(i + 1)}" ${bm === pad(i + 1) ? 'selected' : ''}>${m}</option>`).join('')}</select>
       <input type="number" id="f-bday" min="1" max="31" placeholder="Day" value="${bd ? +bd : ''}"></div></div>
-    <div class="field"><label>Groups</label><input id="f-groups" list="group-list" value="${esc((p.groups || []).join(', '))}" placeholder="e.g. College, Work">
-      <datalist id="group-list">${groups.map(g => `<option value="${esc(g)}">`).join('')}</datalist></div>
-  </div>
-  <div class="two">
-    <div class="field"><label>Where you met</label><input id="f-metAt" value="${esc(p.metAt || '')}" placeholder="Optional"></div>
     <div class="field"><label>When you met</label><input type="date" id="f-metDate" value="${esc(p.metDate || '')}" max="${today()}"></div>
   </div>
+  <div class="field"><label>Where you met</label><input id="f-metAt" value="${esc(p.metAt || '')}" placeholder="Optional"></div>
   <div class="field"><label>Interests</label><input id="f-interests" value="${esc(p.interests || '')}" placeholder="Comma separated"></div>
   <div class="field"><label>Notes</label><textarea id="f-notes" placeholder="What's going on in their life, people in their world, anything worth remembering">${esc(p.notes || '')}</textarea></div>
   <details><summary>Custom cadence for this person</summary>
@@ -1420,7 +1419,7 @@ function bulkFormHtml() {
   <div class="field"><label>Names</label><textarea id="b-names" style="min-height:150px" placeholder="Jordan Lee&#10;Priya Shah&#10;Marcus" autofocus></textarea></div>
   ${kindFields({ kind: 'friend', tier: 3, interest: 1 })}
   <label class="check"><input type="checkbox" id="b-remote"><span>Long distance<small>Check-ins only.</small></span></label>
-  <div class="field"><label>Groups</label><input id="b-groups" list="group-list" placeholder="Optional, e.g. College"><datalist id="group-list">${allGroups().map(g => `<option value="${esc(g)}">`).join('')}</datalist></div>
+  <div class="field"><label>Groups</label>${gtagHtml()}<span class="hint">Optional. Everyone above joins these groups.</span></div>
   <div class="two">
     <div class="field"><label>Last in touch</label>${approxSelect('f-seedText')}</div>
     <div class="field"><label>Last saw them in person</label>${approxSelect('f-seedHang')}</div>
@@ -1490,7 +1489,7 @@ function eventFormHtml(e) {
 }
 
 /* Type-to-search person picker. 'multi' keeps a list of chips; 'single' holds one person. */
-const combo = { mode: 'multi', ids: [], q: '', active: 0, open: false, matches: [] };
+const combo = { mode: 'multi', ids: [], q: '', active: 0, open: false, matches: [], nav: false };
 function comboReset(mode, ids) { Object.assign(combo, { mode, ids: [...new Set(ids || [])].filter(id => person(id)), q: '', active: 0, open: false, matches: [] }); }
 function comboHtml(autofocus) {
   return `<div class="combo" id="combo">
@@ -1553,6 +1552,46 @@ function comboRender() {
       <span class="nm">${comboMark(p.name, combo.q)}</span><span class="who-meta">${esc(info)}</span></div>`;
   }).join('');
 }
+
+/* Group tags: type a group, Enter or comma adds it; suggests existing groups, or creates a new one. */
+const gtag = { tags: [], q: '', active: 0, open: false, opts: [], nav: false };
+const canonGroup = name => allGroups().find(g => g.toLowerCase() === name.trim().toLowerCase()) || name.trim().replace(/\s+/g, ' ');
+function gtagReset(tags) { Object.assign(gtag, { tags: [...new Set((tags || []).filter(Boolean))], q: '', active: 0, open: false, opts: [], nav: false }); }
+function gtagHtml() {
+  return `<div class="combo">
+    <div class="combo-box" id="gtag-box" onclick="if(event.target===this)$('#gtag-input').focus()">
+      <span id="gtag-chips" style="display:contents">${gtagChipsHtml()}</span>
+      <input id="gtag-input" type="text" autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false" enterkeyhint="done"
+        role="combobox" aria-expanded="false" aria-controls="gtag-list" placeholder="${gtag.tags.length ? 'Add another group' : 'Type a group, then Enter'}"
+        oninput="App.gtagInput(this.value)" onfocus="App.gtagFocus()" onblur="App.gtagBlur()" onkeydown="App.gtagKey(event)">
+    </div>
+    <div class="combo-list" id="gtag-list" role="listbox"></div>
+  </div>`;
+}
+function gtagChipsHtml() {
+  return gtag.tags.map((g, i) => `<span class="chip group"><span>${esc(g)}</span><button type="button" aria-label="Remove ${esc(g)}" onmousedown="event.preventDefault()" onclick="App.gtagRemove(${i})">&times;</button></span>`).join('');
+}
+function gtagRender() {
+  const list = $('#gtag-list'), input = $('#gtag-input');
+  if (!list) return;
+  $('#gtag-chips').innerHTML = gtagChipsHtml();
+  if (input) { input.placeholder = gtag.tags.length ? 'Add another group' : 'Type a group, then Enter'; input.setAttribute?.('aria-expanded', gtag.open ? 'true' : 'false'); }
+  const q = gtag.q.trim(), ql = q.toLowerCase();
+  const have = new Set(gtag.tags.map(t => t.toLowerCase()));
+  const counts = {};
+  for (const p of activePeople()) for (const g of p.groups || []) counts[g] = (counts[g] || 0) + 1;
+  const existing = allGroups().filter(g => !have.has(g.toLowerCase()) && (!ql || g.toLowerCase().includes(ql)))
+    .sort((a, b) => (b.toLowerCase().startsWith(ql) - a.toLowerCase().startsWith(ql)) || a.localeCompare(b)).slice(0, 6);
+  gtag.opts = existing.map(g => ({ g, n: counts[g] || 0 }));
+  if (q && !allGroups().some(g => g.toLowerCase() === ql) && !have.has(ql)) gtag.opts.push({ g: q, create: true });
+  gtag.active = Math.min(gtag.active, Math.max(0, gtag.opts.length - 1));
+  if (!gtag.open || !gtag.opts.length) { list.innerHTML = ''; return; }
+  list.innerHTML = (!q ? '<div class="combo-head">Your groups</div>' : '') + gtag.opts.map((o, i) => `<div class="combo-opt ${o.create ? 'create' : ''} ${i === gtag.active ? 'on' : ''}" role="option"
+      onmousedown="event.preventDefault()" onclick="App.gtagPick(${i})" onmousemove="App.gtagHover(${i})">
+      <span class="nm">${o.create ? `Create <b>${esc(o.g)}</b>` : comboMark(o.g, q)}</span><span class="who-meta">${o.create ? 'New group' : people(o.n)}</span></div>`).join('');
+}
+// tags plus anything typed but not yet confirmed, so pressing Save never loses a group
+const gtagValue = () => [...new Set([...gtag.tags, ...(gtag.q.split(',').map(x => x.trim()).filter(Boolean).map(canonGroup))])];
 
 function detailHtml(p) {
   const s = stats(p);
@@ -1644,7 +1683,6 @@ function syncEventLogs(e) {
   if (e.done) for (const pid of e.personIds) if (person(pid)) addLog(pid, 'hangout', e.date, e.hours, e.title, e.id);
 }
 const seedFrom = v => v ? addDays(today(), -+v) : null;
-const parseGroups = s => [...new Set(s.split(',').map(x => x.trim()).filter(Boolean))];
 function newPerson(data) {
   return { id: uid(), created: today(), skip: {}, archived: false, promotedAt: null, groups: [], followUps: [], seed: {}, ...data };
 }
@@ -1712,8 +1750,43 @@ const App = {
   moreHistory(pid) { histAll = true; openModal(detailHtml(person(pid))); },
 
   /* people */
-  personForm(id, kind) { openModal(personFormHtml(id ? person(id) : null, kind)); App.kindToggle(); },
-  bulkForm() { openModal(bulkFormHtml()); App.kindToggle(); },
+  personForm(id, kind) { gtagReset(id ? person(id).groups : []); openModal(personFormHtml(id ? person(id) : null, kind)); App.kindToggle(); },
+  bulkForm() { gtagReset([]); openModal(bulkFormHtml()); App.kindToggle(); },
+  gtagFocus() { gtag.open = true; gtag.active = 0; gtagRender(); },
+  gtagBlur() { setTimeout(() => { if (document.activeElement?.id !== 'gtag-input') { gtag.open = false; gtagRender(); } }, 200); },
+  gtagInput(v) {
+    if (v.includes(',')) {   // a comma confirms what came before it
+      const parts = v.split(',');
+      for (const part of parts.slice(0, -1)) if (part.trim()) App.gtagAdd(part);
+      v = parts.at(-1); const input = $('#gtag-input'); if (input) input.value = v;
+    }
+    gtag.q = v; gtag.open = true; gtag.active = 0; gtag.nav = false; gtagRender();
+  },
+  gtagHover(i) { if (gtag.active !== i) { gtag.active = i; gtagRender(); } },
+  gtagAdd(name) {
+    const g = canonGroup(name);
+    if (g && !gtag.tags.some(t => t.toLowerCase() === g.toLowerCase())) gtag.tags.push(g);
+  },
+  gtagPick(i) {
+    const o = gtag.opts[i]; if (!o) return;
+    App.gtagAdd(o.g);
+    gtag.q = ''; gtag.active = 0; gtag.open = true;
+    const input = $('#gtag-input'); if (input) { input.value = ''; input.focus(); }
+    gtagRender();
+  },
+  gtagRemove(i) { gtag.tags.splice(i, 1); gtagRender(); $('#gtag-input')?.focus(); },
+  gtagKey(e) {
+    const n = gtag.opts.length;
+    if (e.key === 'ArrowDown') { e.preventDefault(); gtag.open = true; gtag.nav = true; gtag.active = n ? (gtag.active + 1) % n : 0; gtagRender(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); gtag.nav = true; gtag.active = n ? (gtag.active - 1 + n) % n : 0; gtagRender(); }
+    else if (e.key === 'Enter' || (e.key === 'Tab' && gtag.q.trim())) {
+      if (e.key === 'Enter' || gtag.q.trim()) e.preventDefault();
+      if (gtag.open && n && (gtag.q.trim() || gtag.nav)) { App.gtagPick(gtag.active); gtag.nav = false; }
+      else if (gtag.q.trim()) { App.gtagAdd(gtag.q); gtag.q = ''; e.target.value = ''; gtagRender(); }
+    }
+    else if (e.key === 'Escape' && gtag.open) { e.preventDefault(); e.stopPropagation(); gtag.open = false; gtagRender(); }
+    else if (e.key === 'Backspace' && !e.target.value && gtag.tags.length) { gtag.tags.pop(); gtagRender(); }
+  },
   remoteToggle() { $('#f-loc-wrap').style.display = $('#f-remote').checked ? '' : 'none'; },
   kindToggle() {
     const k = document.querySelector('input[name=f-kind]:checked')?.value;
@@ -1733,7 +1806,7 @@ const App = {
       textEvery: +$('#f-textEvery').value || null, hangEvery: +$('#f-hangEvery').value || null,
       remote: $('#f-remote').checked, location: $('#f-remote').checked ? $('#f-location').value.trim() : '',
       birthday: bm && bd >= 1 && bd <= 31 ? `${bm}-${pad(bd)}` : null,
-      groups: parseGroups($('#f-groups').value),
+      groups: gtagValue(),
     };
     if (id) {
       const p = person(id);
@@ -1753,7 +1826,7 @@ const App = {
     const kind = document.querySelector('input[name=f-kind]:checked').value;
     const base = {
       kind, tier: +$('#f-tier').value, interest: +$('#f-interest').value, remote: $('#b-remote').checked, location: '',
-      groups: parseGroups($('#b-groups').value), metAt: '', metDate: null, interests: '', notes: '', textEvery: null, hangEvery: null, birthday: null,
+      groups: gtagValue(), metAt: '', metDate: null, interests: '', notes: '', textEvery: null, hangEvery: null, birthday: null,
     };
     const seed = { text: seedFrom($('#f-seedText').value), hang: seedFrom($('#f-seedHang').value) };
     const added = list.map(name => newPerson({ ...base, name, seed: { ...seed }, groups: [...base.groups] }));
@@ -1839,7 +1912,7 @@ const App = {
   /* person picker */
   comboFocus() { combo.open = true; combo.active = 0; comboRender(); },
   comboBlur() { setTimeout(() => { if (document.activeElement?.id !== 'combo-input') { combo.open = false; comboRender(); } }, 200); },
-  comboInput(v) { combo.q = v; combo.open = true; combo.active = 0; $('#combo-box')?.classList.remove('invalid'); comboRender(); },
+  comboInput(v) { combo.q = v; combo.open = true; combo.active = 0; combo.nav = false; $('#combo-box')?.classList.remove('invalid'); comboRender(); },
   comboHover(i) { if (combo.active !== i) { combo.active = i; comboRender(); } },
   comboPick(id) {
     combo.ids = combo.mode === 'single' ? [id] : [...new Set([...combo.ids, id])];
@@ -1857,10 +1930,10 @@ const App = {
   },
   comboKey(e) {
     const n = combo.matches.length;
-    if (e.key === 'ArrowDown') { e.preventDefault(); combo.open = true; combo.active = n ? (combo.active + 1) % n : 0; comboRender(); }
-    else if (e.key === 'ArrowUp') { e.preventDefault(); combo.active = n ? (combo.active - 1 + n) % n : 0; comboRender(); }
+    if (e.key === 'ArrowDown') { e.preventDefault(); combo.open = true; combo.nav = true; combo.active = n ? (combo.active + 1) % n : 0; comboRender(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); combo.nav = true; combo.active = n ? (combo.active - 1 + n) % n : 0; comboRender(); }
     else if (e.key === 'Enter' || (e.key === 'Tab' && combo.q.trim() && n)) {
-      if (combo.open && n) { e.preventDefault(); App.comboPick(combo.matches[combo.active].p.id); }
+      if (combo.open && n && (combo.q.trim() || combo.nav)) { e.preventDefault(); combo.nav = false; App.comboPick(combo.matches[combo.active].p.id); }
       else if (e.key === 'Enter') e.preventDefault();
     }
     else if (e.key === 'Escape' && combo.open) { e.preventDefault(); e.stopPropagation(); combo.open = false; comboRender(); }
