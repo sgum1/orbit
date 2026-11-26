@@ -152,6 +152,7 @@ h1{font-family:var(--serif);font-weight:400;font-size:36px;line-height:1.15;lett
 .ev.confirm{background:transparent;border:1px dashed var(--faint)}
 .ev.confirm .t:after{content:" · confirm";color:var(--due)}
 .ev.log{background:transparent;border:1px solid var(--line)}
+.day-body{display:flex;flex-direction:column;gap:6px;flex:1;min-width:0}
 .day-texts{font-size:11.5px;color:var(--muted);padding:2px 3px;line-height:1.4}
 .day-add{margin-top:auto;background:none;border:1px dashed transparent;border-radius:8px;color:var(--faint);font-size:12.5px;padding:6px;cursor:pointer}
 .day:hover .day-add{border-color:var(--line);color:var(--muted)}
@@ -277,7 +278,6 @@ details[open] summary:before{content:"– "}
   .wrap{padding:0 18px}
   .top{height:52px}
   #nav{display:none}
-  .tabbar{display:flex}
   main{padding-top:28px;padding-bottom:calc(120px + env(safe-area-inset-bottom))}
   h1{font-size:30px}
   .cards{grid-template-columns:1fr}
@@ -299,7 +299,7 @@ details[open] summary:before{content:"– "}
   .row.task{grid-template-columns:24px 1fr}
   .log.fu{grid-template-columns:24px 1fr 24px}
   .log .x{font-size:22px}
-  .toast{bottom:calc(84px + env(safe-area-inset-bottom));white-space:normal;border-radius:16px;width:calc(100vw - 32px);justify-content:space-between}
+  .toast{bottom:calc(146px + env(safe-area-inset-bottom));white-space:normal;border-radius:16px;width:calc(100vw - 32px);justify-content:space-between}
   .card{padding:18px}
   .card .actions .btn{flex:1 1 auto}
   .toolbar .btn{flex:1 1 auto}
@@ -311,7 +311,7 @@ details[open] summary:before{content:"– "}
 }
 
 /* phone tab bar */
-.tabbar{display:none;position:fixed;left:0;right:0;bottom:0;z-index:10;background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
+.tabbar{display:none;position:fixed;left:0;right:0;bottom:0;z-index:10;background:color-mix(in srgb,var(--bg) 97%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
 .tabbar button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:0;color:var(--faint);font-size:10.5px;font-weight:500;letter-spacing:.01em;padding:5px 0 2px;cursor:pointer;position:relative}
 .tabbar button.on{color:var(--ink)}
 .tabbar svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
@@ -339,7 +339,115 @@ details[open] summary:before{content:"– "}
 .bday-fields{display:grid;grid-template-columns:1.3fr 1fr;gap:8px}
 .facts div:last-child:nth-child(odd){border-right:0}
 [role=button]:focus-visible,button:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radius:6px}
-@media (max-width:640px){ .inline-add{grid-template-columns:1fr} .row.task{grid-template-columns:18px 1fr} .row.task .cell{grid-column:2} }
+@media (max-width:640px){ .inline-add{grid-template-columns:1fr} }
+
+/* floating add button + action sheet */
+.fab{display:none;position:fixed;right:18px;bottom:calc(78px + env(safe-area-inset-bottom));z-index:11;width:54px;height:54px;border-radius:50%;border:0;background:var(--ink);color:var(--bg);box-shadow:0 6px 20px rgba(0,0,0,.18);cursor:pointer;align-items:center;justify-content:center}
+.fab svg{width:22px;height:22px;stroke:currentColor;stroke-width:2;stroke-linecap:round;fill:none}
+.fab:active{transform:scale(.96)}
+body:not([data-view=week]):not([data-view=calendar]):not([data-view=people]) .fab{display:none!important}
+.sheet-list{margin-top:10px;border-top:1px solid var(--line)}
+.sheet-list button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;background:none;border:0;border-bottom:1px solid var(--line);padding:15px 2px;text-align:left;cursor:pointer;font-size:16px}
+.sheet-list button span{font-size:13.5px;color:var(--muted)}
+.sheet-list button:active{background:var(--hover)}
+.section + .rows{border-top:0}
+
+/* ---- phone layout (kept last so it overrides the rules above) ---- */
+@media (max-width:640px){
+  body{font-size:15.5px}
+  .top{height:50px}
+  .logo{font-size:20px}
+  main{padding-top:22px}
+  h1{font-size:31px;margin:4px 0 6px}
+  .lede{font-size:15px}
+  .tabbar{display:flex}
+  .fab{display:flex}
+  .page-actions{display:none!important}
+  .section{margin:38px 0 12px;flex-wrap:wrap;row-gap:2px}
+  .section-note{flex-basis:100%;text-align:left;font-size:12.5px}
+  .section .linkish{font-size:13.5px}
+  .week-progress{margin-top:16px}
+  .bar2{max-width:none}
+
+  /* notices: text on top, buttons underneath */
+  .banner{margin-top:22px;padding:2px 16px}
+  .banner-row{flex-wrap:wrap;gap:10px;padding:14px 0}
+  .banner-row .grow{flex-basis:100%;font-size:14.5px;line-height:1.45}
+  .banner-row .btn{flex:0 0 auto}
+
+  /* cards */
+  .cards{gap:12px}
+  .card{padding:16px 16px 14px;border-radius:16px}
+  .name{font-size:16.5px}
+  .idea{margin-top:12px;padding-top:12px;font-size:14.5px}
+  .note{font-size:13.5px}
+  .card .actions{padding-top:14px;gap:8px}
+  .card .actions .btn{flex:1 1 auto}
+  .card .actions .btn-quiet{flex:1 1 100%;height:34px}
+
+  /* lists */
+  .row{align-items:start;padding:14px 4px;column-gap:14px;row-gap:6px}
+  .row > .dot{margin-top:8px}
+  .row:not(.simple):not(.task):not(.plan){grid-template-columns:6px auto auto 1fr}
+  .row:not(.simple):not(.task):not(.plan) > .row-main{grid-column:2 / -1}
+  .row:not(.simple):not(.task):not(.plan) > .cell{flex-direction:row;align-items:baseline;gap:6px;grid-column:auto}
+  .row:not(.simple):not(.task):not(.plan) > .cell:nth-last-child(2){grid-column:2}
+  .row:not(.simple):not(.task):not(.plan) > .cell:last-child{grid-column:3}
+  .row.simple{grid-template-columns:6px 1fr auto}
+  .row.simple > .cell, .row.task > .cell{grid-column:auto;flex-direction:column;align-items:flex-end;text-align:right}
+  .row.simple > .actions{grid-column:2 / -1;margin:4px 0 0!important}
+  .row.task{grid-template-columns:24px 1fr auto}
+  .row.task > .tick, .row.task > .ring{margin-top:1px}
+  .row.plan{grid-template-columns:58px 1fr auto}
+  .row.plan > .status{margin-top:2px}
+  .when-col{font-size:13px}
+  .meta{font-size:13.5px}
+  .cell-label{font-size:10.5px}
+
+  /* people toolbar */
+  .toolbar{gap:8px;margin-top:16px}
+  .seg-tabs{width:100%;overflow-x:auto;scrollbar-width:none}
+  .seg-tabs::-webkit-scrollbar{display:none}
+  .seg-tabs button{flex:1 0 auto;padding:7px 12px;font-size:14px}
+  select.inline{flex:1 1 0;min-width:0}
+
+  /* calendar: compact day rows */
+  .cal-head{align-items:flex-start;gap:10px}
+  .cal-nav{width:100%}
+  .cal-nav .btn:nth-child(2){flex:1}
+  .cal{margin-top:18px}
+  .day{flex-direction:row;align-items:flex-start;gap:12px;padding:12px 14px}
+  .day-head{width:40px;flex:none;flex-direction:column;justify-content:flex-start;align-items:center;gap:0;margin:0;padding:0}
+  .day-name{font-size:10.5px}
+  .day-num{font-size:19px;width:34px;height:34px}
+  .day-body{padding-top:2px}
+  .day-add{margin:0;padding:6px 0;border:0!important;text-align:left;color:var(--faint)!important;font-size:13.5px;align-self:flex-start}
+  .day-texts{padding:2px 0}
+  .ev{padding:9px 11px}
+
+  /* insights */
+  .stats{grid-template-columns:1fr 1fr;margin-top:20px}
+  .stat{padding:14px 0}
+  .stat b{font-size:28px}
+  table{font-size:13.5px}
+  th,td{padding:11px 6px 11px 0}
+
+  /* research */
+  .entry{padding:24px 0}
+  .entry h3{font-size:20px}
+
+  /* sheets */
+  .modal h2{font-size:24px}
+  .facts div{font-size:14px}
+  .foot{gap:6px}
+  .foot .btn{flex:1 1 auto}
+  .foot .left{flex:0 0 auto}
+  .modal .actions .btn{flex:1 1 calc(50% - 4px)}
+  .panel-top{flex-wrap:wrap;row-gap:4px}
+  .panel-top .label{flex-basis:100%}
+  .three{grid-template-columns:1.25fr 1fr .7fr;gap:8px}
+  .three input{padding:8px 9px}
+}
 </style>
 </head>
 <body>
@@ -349,6 +457,7 @@ details[open] summary:before{content:"– "}
 </div></header>
 <main class="wrap" id="main"></main>
 <nav class="tabbar" id="tabbar" aria-label="Sections"></nav>
+<button class="fab" id="fab" aria-label="Add" onclick="App.addSheet()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
 <div id="modal-root"></div>
 <div id="toast-root"></div>
 
@@ -733,13 +842,15 @@ function dueStatus(due) {
   if (rem === 0) return status('due', 'Due today');
   return status('soon', `By ${wd(due)}`);
 }
-function ideaFor(p, type) {
+function ideaFor(p, type, idx) {
   const set = p.remote && type === 'text' ? IDEAS.remoteText
     : p.kind === 'acq' ? (type === 'hang' ? IDEAS.acqHang : IDEAS.acqText) : (type === 'hang' ? IDEAS.friendHang : IDEAS.friendText);
-  return set[(hash(p.id + weekStart(today()) + type) + (ideaShift[p.id + type] || 0)) % set.length];
+  // with a card position, rotate from a weekly starting point so neighbouring cards never repeat
+  const base = idx == null ? hash(p.id + weekStart(today()) + type) : hash(weekStart(today()) + type) + idx;
+  return set[(base + (ideaShift[p.id + type] || 0)) % set.length];
 }
-function ideaHtml(p, type) {
-  return `<p class="idea">${esc(ideaFor(p, type))} <button class="another" onclick="App.shuffle('${p.id}','${type}')">Another idea</button></p>`;
+function ideaHtml(p, type, idx) {
+  return `<p class="idea">${esc(ideaFor(p, type, idx))} <button class="another" onclick="App.shuffle('${p.id}','${type}')">Another idea</button></p>`;
 }
 function extraLines(p, s, ws, we) {
   let h = '';
@@ -768,6 +879,7 @@ function renderNav() {
     `<button class="${view === k || (k === 'settings' && view === 'science') ? 'on' : ''}" onclick="App.go('${k}')" aria-label="${l}"><svg viewBox="0 0 24 24">${TAB_ICONS[k]}</svg>${l}${k === 'week' && left ? `<span class="n">${left}</span>` : ''}</button>`).join('');
 }
 function render() {
+  document.body.dataset.view = view;
   materialize(addDays(maxDate([today(), calWeek]), 42));
   renderNav();
   $('#main').innerHTML = ({ week: renderWeek, calendar: renderCalendar, people: renderPeople, insights: renderInsights, science: renderScience, settings: renderSettings })[view]();
@@ -801,7 +913,7 @@ function renderWeek() {
     <h1>This week.</h1>
     <p class="lede">${total ? `See ${people(plan.see.length)} in person and check in with ${people(plan.text.length)}.` : 'Nothing is due this week.'}</p>
     ${total ? `<div class="week-progress"><div class="bar2"><span class="d" style="width:${done / total * 100}%"></span><span class="p" style="width:${planned / total * 100}%"></span></div><span>${[`${done} done`, planned ? `${planned} planned` : '', `${toGo} to go`].filter(Boolean).join(' · ')}</span></div>` : ''}
-    <div class="toolbar"><button class="btn btn-primary" onclick="App.eventForm()">Plan something</button><button class="btn" onclick="App.logForm()">Log interaction</button><button class="btn" onclick="App.personForm()">Add person</button></div>`;
+    <div class="toolbar page-actions"><button class="btn btn-primary" onclick="App.eventForm()">Plan something</button><button class="btn" onclick="App.logForm()">Log interaction</button><button class="btn" onclick="App.personForm()">Add person</button></div>`;
 
   // banners: past plans awaiting confirmation, backup nudge
   const pending = state.events.filter(e => !e.done && e.date < ws).sort(byDate).reverse();
@@ -852,7 +964,7 @@ function renderWeek() {
       <div class="grow"><b>${esc(g)}</b> <span class="muted">${esc(listNames(names(ids)))} are all due. One plan together covers everyone.</span></div>
       <button class="btn btn-sm" onclick="App.planGroup(${i})">Plan together</button></div>`).join('')}</div>`;
     h += `<div class="cards">`;
-    for (const it of plan.see) {
+    for (const [ci, it] of plan.see.entries()) {
       const { p } = it, s = stats(p);
       const e = it.planned;
       let st, body, actions = '';
@@ -871,7 +983,7 @@ function renderWeek() {
         actions = `<button class="btn btn-sm" onclick="App.eventForm('${e.id}')">View plan</button>`;
       } else {
         st = dueStatus(it.due);
-        body = ideaHtml(p, 'hang') + extraLines(p, s, ws, plan.we);
+        body = ideaHtml(p, 'hang', ci) + extraLines(p, s, ws, plan.we);
         actions = `<button class="btn btn-primary btn-sm" onclick="App.eventForm(null,{personIds:['${p.id}']})">Schedule</button>
           <button class="btn btn-sm" onclick="App.logForm('${p.id}','hangout')">Log time together</button>
           <button class="btn btn-quiet btn-sm" onclick="App.skip('${p.id}','hang')">Skip this week</button>`;
@@ -887,13 +999,13 @@ function renderWeek() {
 
   if (plan.text.length) {
     h += `<div class="section"><div class="eyebrow">Check in<span>${plan.text.filter(x => x.done).length}/${plan.text.length}</span></div><div class="section-note">A short message is enough</div></div><div class="cards">`;
-    for (const it of plan.text) {
+    for (const [ci, it] of plan.text.entries()) {
       const { p } = it, s = stats(p);
       const st = it.done ? status('good', 'Done') : it.times > 1 ? status(it.count ? 'soon' : 'due', `${it.count} of ${it.times} this week`) : dueStatus(it.due);
       h += `<article class="card ${it.done ? 'is-done' : ''}">
         <div class="card-top"><button class="name" onclick="App.detail('${p.id}')">${esc(p.name)}</button>${st}</div>
         ${meta(p, [p.remote && p.location ? p.location : '', s.lastAny ? `last contact ${ago(since(s.lastAny))}` : 'no contact yet'])}
-        ${it.done ? `<p class="idea">In touch ${s.lastAny ? wd(s.lastAny) : ''}.</p>` : `${ideaHtml(p, 'text')}${extraLines(p, s, ws, plan.we)}
+        ${it.done ? `<p class="idea">In touch ${s.lastAny ? wd(s.lastAny) : ''}.</p>` : `${ideaHtml(p, 'text', ci)}${extraLines(p, s, ws, plan.we)}
         <div class="actions">
           <button class="btn btn-primary btn-sm" onclick="App.quickLog('${p.id}','text')">Texted</button>
           <button class="btn btn-sm" onclick="App.quickLog('${p.id}','call')">Called</button>
@@ -948,7 +1060,7 @@ function renderCalendar() {
       <button class="btn btn-icon" onclick="App.calShift(-7)" aria-label="Previous week">&lsaquo;</button>
       <button class="btn" onclick="App.calShift(0)" ${isThis ? 'disabled style="opacity:.5"' : ''}>Today</button>
       <button class="btn btn-icon" onclick="App.calShift(7)" aria-label="Next week">&rsaquo;</button>
-      <button class="btn btn-primary" style="margin-left:8px" onclick="App.eventForm(null,{date:'${isThis ? t : ws}'})">Add activity</button>
+      <button class="btn btn-primary page-actions" style="margin-left:8px" onclick="App.eventForm(null,{date:'${isThis ? t : ws}'})">Add activity</button>
     </div></div>
   <div class="cal">`;
   for (const d of days) {
@@ -959,12 +1071,14 @@ function renderCalendar() {
     const bdays = activePeople().filter(p => p.birthday && bdayIn(+d.slice(0, 4), p.birthday) === d);
     h += `<div class="day ${d === t ? 'today' : ''} ${d < t ? 'past' : ''}">
       <div class="day-head"><span class="day-name">${wd(d)}</span><span class="day-num">${parseD(d).getDate()}</span></div>
+      <div class="day-body">
       ${bdays.map(p => `<button class="ev bday" onclick="App.detail('${p.id}')"><span class="t">Birthday</span><b>${esc(p.name)}</b></button>`).join('')}
       ${evs.map(e => `<button class="ev ${e.done ? 'done' : e.date < t ? 'confirm' : ''}" onclick="App.eventForm('${e.id}')">
         <span class="t">${e.time ? fmtTime(e.time) : 'Any time'}${seriesOf(e)?.repeat ? ' · repeats' : ''}</span><b>${esc(e.title)}</b>${e.personIds.length ? `<span class="who">${esc(names(e.personIds).join(', '))}</span>` : ''}</button>`).join('')}
       ${inPerson.map(l => `<button class="ev log" onclick="App.detail('${l.personId}')"><span class="t">${l.type === 'call' ? 'Call' : 'In person'}${+l.hours ? ' · ' + fmtH(+l.hours) : ''}</span><b>${esc(person(l.personId).name)}</b></button>`).join('')}
       ${texts.length ? `<div class="day-texts">Texted ${esc(texts.join(', '))}</div>` : ''}
       <button class="day-add" onclick="App.eventForm(null,{date:'${d}'})">+ Add</button>
+      </div>
     </div>`;
   }
   h += `</div>`;
@@ -1007,7 +1121,7 @@ function renderPeople() {
     <select class="inline" onchange="App.pf('sort',this.value)">
       ${[['urgency', 'Most due'], ['level', 'Closeness'], ['name', 'Name'], ['recent', 'Recent contact']].map(([v, l]) => `<option value="${v}" ${pf.sort === v ? 'selected' : ''}>${l}</option>`).join('')}
     </select>
-    <div style="margin-left:auto;display:flex;gap:8px"><button class="btn" onclick="App.bulkForm()">Add several</button><button class="btn btn-primary" onclick="App.personForm()">Add person</button></div>
+    <div class="page-actions" style="margin-left:auto;display:flex;gap:8px"><button class="btn" onclick="App.bulkForm()">Add several</button><button class="btn btn-primary" onclick="App.personForm()">Add person</button></div>
   </div>`;
   if (!state.people.length) return h + emptyState();
   if (!ppl.length) return h + `<p class="muted" style="margin-top:32px">No one matches.</p>`;
@@ -1500,6 +1614,16 @@ const App = {
   pf(k, v) { pf[k] = v; render(); },
   search(v) { pf.q = v; render(); const q = $('#q'); q.focus(); q.setSelectionRange(v.length, v.length); },
   calShift(n) { calWeek = n === 0 ? weekStart(today()) : addDays(calWeek, n); render(); },
+  addSheet() {
+    const d = view === 'calendar' && calWeek !== weekStart(today()) ? calWeek : today();
+    const item = (fn, title, sub) => `<button onclick="App.close();${fn}"><b>${title}</b><span>${sub}</span></button>`;
+    openModal(`<h2>Add</h2><div class="sheet-list">
+      ${item(`App.eventForm(null,{date:'${d}'})`, 'Plan something', 'Put a plan on the calendar')}
+      ${activePeople().length ? item('App.logForm()', 'Log an interaction', 'A text, a call, or time together') : ''}
+      ${item('App.personForm()', 'Add a person', 'A friend, or someone you just met')}
+      ${item('App.bulkForm()', 'Add several people', 'Paste a list of names')}
+    </div>`);
+  },
   shuffle(pid, type) { ideaShift[pid + type] = (ideaShift[pid + type] || 0) + 1; render(); },
   moreHistory(pid) { histAll = true; openModal(detailHtml(person(pid))); },
 
