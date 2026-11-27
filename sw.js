@@ -7,9 +7,9 @@
      fails (offline) or is very slow, the saved copy is used, so it still works without signal.
    - Icons: cache first. They rarely change.
    Bump VERSION when releasing so old caches are cleared. */
-const VERSION = 'orbit-v20';
+const VERSION = 'orbit-v21';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './icons/apple-touch-icon.png', './icons/icon-192.png', './icons/icon-512.png'];
-const NETWORK_TIMEOUT_MS = 10000;   // offline fails fast anyway; only very slow networks fall back
+const NETWORK_TIMEOUT_MS = 3000;   // slow network: open the saved copy after 3s (the fresh one still lands for next time)
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION)
@@ -32,9 +32,12 @@ function networkFirst(req, key) {
       if (cached && !settled) { settled = true; resolve(cached); }
     };
     const timer = setTimeout(useCache, NETWORK_TIMEOUT_MS);
-    fetch(new Request(req.url, { cache: 'no-cache', credentials: 'same-origin' })).then(res => {
+    fetch(new Request(req.url, { cache: 'no-cache', credentials: 'same-origin' })).then(async res => {
       clearTimeout(timer);
-      if (res.ok) cache.put(key, res.clone());
+      // only a real copy of the app is saved; a Wi-Fi login page or a server error falls back to the saved app
+      const good = res.ok && !res.redirected && res.type === 'basic';
+      if (good) cache.put(key, res.clone());
+      if (!good) await useCache();
       if (!settled) { settled = true; resolve(res); }
     }).catch(async () => {
       clearTimeout(timer);
