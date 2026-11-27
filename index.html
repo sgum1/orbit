@@ -542,7 +542,7 @@ body:not([data-view=week]):not([data-view=calendar]):not([data-view=people]) .fa
    Internally, in-person interactions use the type key 'hangout'. */
 
 const KEY = 'orbit.v1';
-const APP_VERSION = '19';   // keep in step with VERSION in sw.js
+const APP_VERSION = '20';   // keep in step with VERSION in sw.js
 
 // Default cadences in days. Based on Dunbar's layers and friendship decay research,
 // tuned for early/mid-20s. Editable in Settings and per person.
@@ -661,7 +661,7 @@ function defaultIntervals() {
 function freshSettings() {
   return { weekCaps: { hang: 5, text: 10 }, intervals: defaultIntervals(), lastBackup: null, backupSnooze: null, tierDismiss: {} };
 }
-function freshState() { return { version: 3, people: [], logs: [], events: [], series: {}, settings: freshSettings() }; }
+function freshState() { return { version: 3, people: [], logs: [], events: [], series: {}, weekPicks: {}, settings: freshSettings() }; }
 function load() {
   try {
     const raw = JSON.parse(localStorage.getItem(KEY));
@@ -672,6 +672,7 @@ function load() {
     raw.logs = raw.logs || [];
     raw.events = raw.events || [];
     raw.series = raw.series || {};
+    raw.weekPicks = raw.weekPicks || {};
     for (const p of raw.people) { p.groups = p.groups || []; p.followUps = p.followUps || []; p.skip = p.skip || {}; }
     for (const e of raw.events) e.personIds = e.personIds || [];
     raw.version = 3;
@@ -713,6 +714,7 @@ const Sync = {
       const st = {};
       for (const [k, v] of Object.entries(state.settings)) if (!LOCAL_ONLY_SETTINGS.includes(k)) st[k] = v;
       out.settings = canon(st);
+      out.weekPicks = canon(state.weekPicks || {});
       return out;
     }
     const sample = new Set(state.people.filter(isSample).map(p => p.id));
@@ -726,7 +728,13 @@ const Sync = {
     return out;
   },
   apply(coll, id, json) {
-    if (coll === 'meta') { if (json) Object.assign(state.settings, JSON.parse(json)); return; }
+    if (coll === 'meta') {
+      if (!json) return;
+      const v = JSON.parse(json);
+      if (id === 'settings') Object.assign(state.settings, v);
+      else if (id === 'weekPicks') state.weekPicks = v;
+      return;
+    }
     if (coll === 'series') { if (json == null) delete state.series[id]; else state.series[id] = JSON.parse(json); return; }
     const arr = state[coll], i = arr.findIndex(r => r.id === id);
     if (json == null) { if (i >= 0) arr.splice(i, 1); return; }
@@ -904,6 +912,7 @@ let calWeek = weekStart(today());
 let histAll = false;
 let groupSugs = [];
 let groupEditing = '';
+let pickEditing = null;
 
 const person = id => state.people.find(p => p.id === id);
 // sample people are flagged; older copies are recognised by the "(sample)" name suffix
@@ -971,36 +980,41 @@ function balance(p, days = 180) {
 function weekPlan(ws, all) {
   const we = addDays(ws, 6), horizon = addDays(we, 7);
   const caps = state.settings.weekCaps;
+  const picks = (state.weekPicks || {})[ws] || {};
+  const pinSee = new Set(picks.see?.ids || []), pinText = new Set(picks.text?.ids || []);
   const see = [], text = [];
   for (const p of activePeople()) {
-    if (p.created > we) continue;
+    if (p.created > we && !pinSee.has(p.id) && !pinText.has(p.id)) continue;
     const iv = intervals(p), w = WEIGHT[p.kind][lvl(p)] || 1;
     const inWeek = state.logs.filter(l => l.personId === p.id && l.date >= ws && l.date <= we);
     const r = refs(p, ws);
     const hangDue = addDays(r.refHang, iv.hang), textDue = addDays(r.refText, iv.text);
-    if (!p.remote && hangDue <= we && p.skip?.hang !== ws) {
+    if (!p.remote && ((hangDue <= we && p.skip?.hang !== ws) || pinSee.has(p.id))) {
       see.push({
-        p, due: hangDue, score: Math.min(diffDays(r.refHang, we) / iv.hang, MAX_RATIO) * w,
+        p, due: hangDue, pinned: pinSee.has(p.id), score: Math.min(diffDays(r.refHang, we) / iv.hang, MAX_RATIO) * w,
         done: inWeek.filter(l => l.type === 'hangout').sort((a, b) => a.date.localeCompare(b.date))[0] || null,
         // a plan this week or next counts as handled
         planned: state.events.filter(e => !e.done && e.personIds.includes(p.id) && e.date >= ws && e.date <= horizon).sort(byDate)[0] || null,
       });
     }
-    if (textDue <= we && p.skip?.text !== ws) {
+    if ((textDue <= we && p.skip?.text !== ws) || pinText.has(p.id)) {
       const times = iv.text < 7 ? Math.floor(7 / iv.text) : 1;
       const count = new Set(inWeek.map(l => l.date)).size;   // distinct days, not messages
-      text.push({ p, due: textDue, score: Math.min(diffDays(r.refText, we) / iv.text, MAX_RATIO) * w, times, count, done: count >= times });
+      text.push({ p, due: textDue, pinned: pinText.has(p.id), score: Math.min(diffDays(r.refText, we) / iv.text, MAX_RATIO) * w, times, count, done: count >= times });
     }
   }
-  see.sort((a, b) => b.score - a.score);
-  text.sort((a, b) => b.score - a.score);
-  const seeShown = all ? see : see.slice(0, caps.hang);
+  // people you picked for the week come first; "only these" drops everyone else
+  const byPick = (a, b) => (b.pinned - a.pinned) || (b.score - a.score);
+  see.sort(byPick); text.sort(byPick);
+  const seeAll = picks.see?.only ? see.filter(x => x.pinned) : see;
+  const take = (arr, cap) => all ? arr : arr.slice(0, Math.max(cap, arr.filter(x => x.pinned).length));
+  const seeShown = take(seeAll, caps.hang);
   const seeIds = new Set(seeShown.map(x => x.p.id));
-  const textPool = text.filter(x => !seeIds.has(x.p.id) || x.times > 1);
-  const textShown = all ? textPool : textPool.slice(0, caps.text);
+  const textPool = (picks.text?.only ? text.filter(x => x.pinned) : text).filter(x => !seeIds.has(x.p.id) || x.times > 1 || x.pinned);
+  const textShown = take(textPool, caps.text);
   const rank = x => x.done ? 2 : x.planned ? 1 : 0;
   const order = arr => arr.map((x, i) => [x, i]).sort((a, b) => rank(a[0]) - rank(b[0]) || a[1] - b[1]).map(a => a[0]);
-  return { ws, we, see: order(seeShown), text: order(textShown), hidden: (see.length - seeShown.length) + (textPool.length - textShown.length) };
+  return { ws, we, picks, see: order(seeShown), text: order(textShown), hidden: (seeAll.length - seeShown.length) + (textPool.length - textShown.length) };
 }
 
 /* Recurring plans: each series stores a template and the last date generated.
@@ -1204,10 +1218,12 @@ function renderWeek() {
     h += `</div>`;
   }
 
+  const editLink = kind => `<button class="linkish small" onclick="App.pickSheet('${kind}')">${plan.picks[kind]?.ids?.length ? 'Edit picks' : 'Edit'}</button>`;
   if (!total) h += `<div class="quiet-box" style="margin-top:44px"><h3>All caught up.</h3><p style="margin:0">Everyone is on track this week.</p></div>`;
 
+  if (!plan.see.length && total) h += `<div class="section"><div class="eyebrow">See in person</div>${editLink('see')}</div><p class="muted small" style="margin:0">No one to see this week.</p>`;
   if (plan.see.length) {
-    h += `<div class="section"><div class="eyebrow">See in person<span>${plan.see.filter(x => x.done).length}/${plan.see.length}</span></div></div><div class="todos">`;
+    h += `<div class="section"><div class="eyebrow">See in person<span>${plan.see.filter(x => x.done).length}/${plan.see.length}</span></div>${editLink('see')}</div><div class="todos">`;
     const open = plan.see.filter(x => !x.done && !x.planned);
     const byGroup = {};
     for (const x of open) for (const g of x.p.groups || []) (byGroup[g] = byGroup[g] || []).push(x.p.id);
@@ -1219,20 +1235,22 @@ function renderWeek() {
       if (it.done) h += todoRow({ p, kind: 'see', done: true, tickClass: 'done', tickAction: `App.detail('${p.id}')`, tickLabel: 'Done', sub: `Saw them ${shortDay(it.done.date)}`, right: status('good', 'Done') });
       else if (e && e.date < t) h += todoRow({ p, kind: 'see', tickAction: `App.confirmEvent('${e.id}')`, tickLabel: 'It happened', sub: `${e.title} · ${eventWhen(e)}`, right: status('due', 'Did it happen?') });
       else if (e) h += todoRow({ p, kind: 'see', tickClass: 'plan', tickAction: `App.logMeet('${p.id}')`, tickLabel: 'Saw them', sub: `${e.title} · ${wd(e.date)}${e.time ? ' ' + fmtTime(e.time) : ''}`, right: status('plan', `Planned ${e.date > plan.we ? relDay(e.date) : wd(e.date)}`), note: todoNote(p) });
-      else h += todoRow({ p, kind: 'see', tickAction: `App.logMeet('${p.id}')`, tickLabel: 'Saw them', sub: `${levelInfo(p).label} · ${seen}`, right: dueStatus(it.due), note: todoNote(p) });
+      else h += todoRow({ p, kind: 'see', tickAction: `App.logMeet('${p.id}')`, tickLabel: 'Saw them', sub: `${levelInfo(p).label} · ${seen}`, right: it.pinned && it.due > plan.we ? status('plan', 'This week') : dueStatus(it.due), note: todoNote(p) });
     }
     h += `</div>`;
   }
 
+  if (!plan.text.length && total) h += `<div class="section"><div class="eyebrow">Check in</div>${editLink('text')}</div><p class="muted small" style="margin:0">No check-ins this week.</p>`;
+  if (!total) h += `<p class="muted small" style="margin-top:14px">Want to reach out anyway? <button class="linkish" onclick="App.pickSheet('text')">Pick people for this week</button></p>`;
   if (plan.text.length) {
-    h += `<div class="section"><div class="eyebrow">Check in<span>${plan.text.filter(x => x.done).length}/${plan.text.length}</span></div></div><div class="todos">`;
+    h += `<div class="section"><div class="eyebrow">Check in<span>${plan.text.filter(x => x.done).length}/${plan.text.length}</span></div>${editLink('text')}</div><div class="todos">`;
     for (const it of plan.text) {
       const { p } = it, s = stats(p);
       const last = s.lastAny ? `last talked ${ago(since(s.lastAny))}` : 'no contact yet';
       if (it.done) h += todoRow({ p, kind: 'text', done: true, tickClass: 'done', tickAction: `App.detail('${p.id}')`, tickLabel: 'Done', sub: s.lastAny ? `Talked ${shortDay(s.lastAny)}` : 'Done', right: status('good', 'Done') });
       else h += todoRow({ p, kind: 'text', tickAction: `App.quickLog('${p.id}','text')`, tickLabel: 'Checked in',
         sub: [levelInfo(p).label, last].filter(Boolean).join(' · '),
-        right: it.times > 1 ? status(it.count ? 'soon' : 'due', `${it.count} of ${it.times}`) : dueStatus(it.due), note: todoNote(p) });
+        right: it.times > 1 ? status(it.count ? 'soon' : 'due', `${it.count} of ${it.times}`) : it.pinned && it.due > plan.we ? status('plan', 'This week') : dueStatus(it.due), note: todoNote(p) });
     }
     h += `</div>`;
   }
@@ -2079,6 +2097,41 @@ const App = {
     const e = id ? JSON.parse(JSON.stringify(getEvent(id))) : { title: preset.title || '', date: preset.date || today(), time: '', hours: 2, personIds: preset.personIds || [], location: '', note: '', done: false };
     comboReset('multi', e.personIds);
     openModal(eventFormHtml(e));
+  },
+  // choose who's on a week's list; off = 0 for this week, 1 for next week
+  pickSheet(kind, off = 0) {
+    const ws = addDays(weekStart(today()), 7 * off), cur = (state.weekPicks || {})[ws]?.[kind] || {};
+    const verb = kind === 'text' ? 'check in with' : 'see in person';
+    pickEditing = { kind, ws };
+    comboReset('multi', cur.ids || []);
+    const cap = state.settings.weekCaps[kind === 'text' ? 'text' : 'hang'];
+    openModal(`<h2>${kind === 'text' ? 'Check in' : 'See in person'}</h2>
+      <div class="seg-tabs" style="margin-top:14px">${['This week', 'Next week'].map((l, i) => `<button class="${off === i ? 'on' : ''}" onclick="App.pickSheet('${kind}',${i})">${l}</button>`).join('')}</div>
+      <p class="sub" style="margin-top:12px">Who do you want to ${verb} ${off ? 'next week' : 'this week'} (${rangeLabel(ws)})?</p>
+      <div class="field"><label>People</label>${comboHtml(false)}</div>
+      <label class="check"><input type="checkbox" id="pk-only" ${cur.only ? 'checked' : ''}><span>Only these people<small>Leave this off and Orbit fills the rest of the list with others who are due, up to ${cap}.</small></span></label>
+      <div class="foot">
+        ${cur.ids?.length || cur.only ? `<button class="btn btn-quiet btn-danger left" onclick="App.clearPicks()">Clear picks</button>` : ''}
+        <button class="btn btn-quiet" onclick="App.close()">Cancel</button>
+        <button class="btn btn-primary" onclick="App.savePicks()">Save</button>
+      </div>`);
+  },
+  savePicks() {
+    const { kind, ws } = pickEditing, ids = combo.ids.filter(id => person(id)), only = $('#pk-only').checked;
+    state.weekPicks = state.weekPicks || {};
+    const wk = state.weekPicks[ws] = state.weekPicks[ws] || {};
+    if (ids.length || only) wk[kind] = { ids, only }; else delete wk[kind];
+    if (!Object.keys(wk).length) delete state.weekPicks[ws];
+    // forget picks for weeks that are over
+    const thisWs = weekStart(today());
+    for (const k of Object.keys(state.weekPicks)) if (k < thisWs) delete state.weekPicks[k];
+    save(); closeModal(); render();
+    toast(ws === thisWs ? 'Updated this week' : `Saved for the week of ${rangeLabel(ws)}`);
+  },
+  clearPicks() {
+    const { kind, ws } = pickEditing, wk = (state.weekPicks || {})[ws];
+    if (wk) { delete wk[kind]; if (!Object.keys(wk).length) delete state.weekPicks[ws]; }
+    save(); closeModal(); render(); toast('Back to automatic suggestions');
   },
   groupsSheet() {
     const counts = {};
