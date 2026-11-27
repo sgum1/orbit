@@ -545,7 +545,7 @@ body:not([data-view=week]):not([data-view=calendar]):not([data-view=people]) .fa
    Internally, in-person interactions use the type key 'hangout'. */
 
 const KEY = 'orbit.v1';
-const APP_VERSION = '10';   // keep in step with VERSION in sw.js
+const APP_VERSION = '11';   // keep in step with VERSION in sw.js
 
 // Default cadences in days. Based on Dunbar's layers and friendship decay research,
 // tuned for early/mid-20s. Editable in Settings and per person.
@@ -867,7 +867,7 @@ function tag(p) {
   let t = '';
   if (p.kind === 'acq') t += '<span class="tag tag-acq">Acquaintance</span>';
   else if (p.promotedAt) t += `<span class="tag tag-grew" title="Became a friend on ${nice(p.promotedAt)}">Grew from acquaintance</span>`;
-  if (p.remote) t += `<span class="tag tag-ld"${p.location ? ` title="${esc(p.location)}"` : ''}>Long distance</span>`;
+  if (p.remote) t += `<span class="tag tag-ld">Long distance</span>`;
   return t;
 }
 function meta(p, parts = []) {
@@ -1015,7 +1015,7 @@ function renderWeek() {
       const last = s.lastAny ? `last talked ${ago(since(s.lastAny))}` : 'no contact yet';
       if (it.done) h += todoRow({ p, kind: 'text', done: true, tickClass: 'done', tickAction: `App.detail('${p.id}')`, tickLabel: 'Done', sub: s.lastAny ? `Talked ${shortDay(s.lastAny)}` : 'Done', right: status('good', 'Done') });
       else h += todoRow({ p, kind: 'text', tickAction: `App.quickLog('${p.id}','text')`, tickLabel: 'Checked in',
-        sub: [levelInfo(p).label, p.remote && p.location ? p.location : '', last].filter(Boolean).join(' · '),
+        sub: [levelInfo(p).label, last].filter(Boolean).join(' · '),
         right: it.times > 1 ? status(it.count ? 'soon' : 'due', `${it.count} of ${it.times}`) : dueStatus(it.due), note: todoNote(p) });
     }
     h += `</div>`;
@@ -1072,7 +1072,7 @@ function renderPeople() {
   if (pf.kind === 'remote') ppl = ppl.filter(p => p.remote);
   if (pf.kind === 'archived') ppl = state.people.filter(p => p.archived);
   if (pf.group) ppl = ppl.filter(p => (p.groups || []).includes(pf.group));
-  if (pf.q) { const q = pf.q.toLowerCase(); ppl = ppl.filter(p => [p.name, p.interests, p.metAt, p.notes, p.location, (p.groups || []).join(' ')].join(' ').toLowerCase().includes(q)); }
+  if (pf.q) { const q = pf.q.toLowerCase(); ppl = ppl.filter(p => [p.name, p.interests, p.metAt, p.notes, (p.groups || []).join(' ')].join(' ').toLowerCase().includes(q)); }
   const S = new Map(ppl.map(p => [p.id, stats(p)]));
   const urg = p => { const s = S.get(p.id); return Math.max(s.tSkipped ? 0 : s.tScore, s.hSkipped ? 0 : s.hScore); };
   if (pf.sort === 'urgency') ppl.sort((a, b) => urg(b) - urg(a));
@@ -1339,14 +1339,13 @@ function personFormHtml(p, kindDefault) {
   return `<h2>${isNew ? 'Add a person' : 'Edit ' + esc(p.name)}</h2>
   <div class="field"><label>Name</label><input id="f-name" value="${esc(p.name || '')}" autofocus></div>
   ${kindFields(p)}
+  <label class="check"><input type="checkbox" id="f-remote" ${p.remote ? 'checked' : ''}><span>Long distance<small>Check-ins only, no meet-up suggestions.</small></span></label>
   ${isNew ? `<div class="two">
     <div class="field"><label>Last talked</label>${approxSelect('f-seedText')}</div>
     <div class="field"><label>Last saw them</label>${approxSelect('f-seedHang')}</div>
   </div>` : ''}
   <details class="more" ${isNew ? '' : 'open'}><summary>More details</summary>
   <div class="field"><label>Groups</label>${gtagHtml()}</div>
-  <label class="check"><input type="checkbox" id="f-remote" ${p.remote ? 'checked' : ''} onchange="App.remoteToggle()"><span>Long distance<small>Check-ins only, no meet-up suggestions.</small></span></label>
-  <div class="field" id="f-loc-wrap" style="${p.remote ? '' : 'display:none'}"><label>Where they live</label><input id="f-location" value="${esc(p.location || '')}" placeholder="Optional, e.g. Chicago"></div>
   <div class="two">
     <div class="field"><label>Birthday</label><div class="bday-fields">
       <select id="f-bmonth"><option value="">Month</option>${MONTHS.map((m, i) => `<option value="${pad(i + 1)}" ${bm === pad(i + 1) ? 'selected' : ''}>${m}</option>`).join('')}</select>
@@ -1581,7 +1580,7 @@ function detailHtml(p) {
       <div><small>Last contact</small>${s.lastAny ? ago(since(s.lastAny)) : 'None logged'}</div>
       <div><small>Last seen in person</small>${s.lastHang ? ago(since(s.lastHang)) : 'None logged'}</div>
       <div><small>Next check-in</small>${s.tSkipped ? 'Skipped this week' : dueIn(s.textRem)} <span class="muted small">· every ${s.iv.text}d</span></div>
-      ${p.remote ? `<div><small>Next time together</small>${s.upcoming[0] ? `Visit ${relDay(s.upcoming[0].date)}` : `Long distance${p.location ? ' · ' + esc(p.location) : ''}`}</div>`
+      ${p.remote ? `<div><small>Next time together</small>${s.upcoming[0] ? `Visit ${relDay(s.upcoming[0].date)}` : 'Long distance'}</div>`
         : `<div><small>Next time together</small>${s.upcoming[0] ? `Planned ${relDay(s.upcoming[0].date)}` : s.hSkipped ? 'Skipped this week' : dueIn(s.hangRem)} <span class="muted small">· every ${s.iv.hang}d</span></div>`}
       ${p.birthday ? `<div><small>Birthday</small>${bdayLabel(p.birthday)} <span class="muted small">· ${relDay(nextBirthday(p, today()))}</span></div>` : ''}
       ${b.n >= 4 ? `<div><small>Who reaches out</small>You ${b.me} · them ${b.them}</div>` : ''}
@@ -1772,7 +1771,6 @@ const App = {
     else if (e.key === 'Escape' && gtag.open) { e.preventDefault(); e.stopPropagation(); gtag.open = false; gtagRender(); }
     else if (e.key === 'Backspace' && !e.target.value && gtag.tags.length) { gtag.tags.pop(); gtagRender(); }
   },
-  remoteToggle() { $('#f-loc-wrap').style.display = $('#f-remote').checked ? '' : 'none'; },
   kindToggle() {
     const k = document.querySelector('input[name=f-kind]:checked')?.value;
     $('#f-tier-wrap').style.display = k === 'friend' ? '' : 'none';
@@ -1789,7 +1787,7 @@ const App = {
       metAt: $('#f-metAt').value.trim(), metDate: $('#f-metDate').value || null,
       interests: $('#f-interests').value.trim(), notes: $('#f-notes').value.trim(),
       textEvery: +$('#f-textEvery').value || null, hangEvery: +$('#f-hangEvery').value || null,
-      remote: $('#f-remote').checked, location: $('#f-remote').checked ? $('#f-location').value.trim() : '',
+      remote: $('#f-remote').checked, location: '',
       birthday: bm && bd >= 1 && bd <= 31 ? `${bm}-${pad(bd)}` : null,
       groups: gtagValue(),
     };
@@ -2079,7 +2077,7 @@ const App = {
     mk('priya', 'Priya (sample)', 'friend', 2, { interests: 'F1, travel', birthday: soonBday }, [['text', 2], ['hangout', 16, 2.5]]);
     mk('marcus', 'Marcus (sample)', 'friend', 3, { interests: 'running, film', groups: ['College'] }, [['text', 20], ['hangout', 70, 4, 'Training for a half marathon']]);
     mk('taylor', 'Taylor (sample)', 'friend', 4, { groups: ['College'] }, [['text', 40], ['text', 75], ['text', 110], ['text', 140], ['text', 170], ['hangout', 150, 2]]);
-    mk('alex', 'Alex (sample)', 'friend', 2, { remote: true, location: 'Chicago', interests: 'NBA, new job' }, [['text', 9], ['call', 24, 0, '', 'them'], ['hangout', 200, 20, 'Visited over the summer']]);
+    mk('alex', 'Alex (sample)', 'friend', 2, { remote: true, interests: 'NBA, new job' }, [['text', 9], ['call', 24, 0, '', 'them'], ['hangout', 200, 20, 'Visited over the summer']]);
     mk('sam', 'Sam (sample)', 'acq', 1, { metAt: 'Climbing gym', metDate: d(35), interests: 'bouldering, indie music', groups: ['Climbing'] }, [['hangout', 35, 1.5, 'Wants to try the outdoor spot'], ['text', 30], ['hangout', 21, 3], ['hangout', 13, 2.5], ['text', 9, 0, '', 'them']]);
     mk('riley', 'Riley (sample)', 'acq', 2, { metAt: `Priya's birthday`, metDate: d(25), interests: 'board games' }, [['hangout', 25, 3, 'Mentioned a game night']]);
     mk('chris', 'Chris (sample)', 'friend', 3, { metAt: 'Work', promotedAt: d(10) }, [['hangout', 80, 10], ['hangout', 60, 15], ['hangout', 40, 12], ['hangout', 25, 8], ['hangout', 11, 6], ['text', 3]]);
