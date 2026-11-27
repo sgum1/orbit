@@ -7,7 +7,7 @@
      fails (offline) or is very slow, the saved copy is used, so it still works without signal.
    - Icons: cache first. They rarely change.
    Bump VERSION when releasing so old caches are cleared. */
-const VERSION = 'orbit-v17';
+const VERSION = 'orbit-v18';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './icons/apple-touch-icon.png', './icons/icon-192.png', './icons/icon-512.png'];
 const NETWORK_TIMEOUT_MS = 10000;   // offline fails fast anyway; only very slow networks fall back
 

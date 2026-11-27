@@ -86,6 +86,8 @@ h1{font-family:var(--serif);font-weight:400;font-size:36px;line-height:1.15;lett
 .tag-acq:before{content:"";width:5px;height:5px;border-radius:50%;border:1.5px solid currentColor}
 .tag-grew{color:var(--acq);border:1px dashed var(--acq);padding:1px 8px}
 .tag-ld{color:var(--muted);border:1px solid var(--line);padding:1px 8px}
+.tag-group{color:var(--ink-2);background:var(--hover);padding:1px 9px}
+.group-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
 .status{font-size:12.5px;font-weight:500;display:inline-flex;align-items:center;gap:7px;white-space:nowrap;font-variant-numeric:tabular-nums}
 .status:before,.dot{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;flex:none;display:inline-block}
 .s-overdue{color:var(--overdue)} .s-due{color:var(--due)} .s-soon{color:var(--soon)} .s-good{color:var(--good)} .s-plan{color:var(--ink)}
@@ -540,7 +542,7 @@ body:not([data-view=week]):not([data-view=calendar]):not([data-view=people]) .fa
    Internally, in-person interactions use the type key 'hangout'. */
 
 const KEY = 'orbit.v1';
-const APP_VERSION = '17';   // keep in step with VERSION in sw.js
+const APP_VERSION = '18';   // keep in step with VERSION in sw.js
 
 // Default cadences in days. Based on Dunbar's layers and friendship decay research,
 // tuned for early/mid-20s. Editable in Settings and per person.
@@ -1063,6 +1065,7 @@ function needsBackup() {
 }
 
 /* pieces */
+const groupTags = p => (p.groups || []).length ? `<div class="group-tags">${p.groups.map(g => `<span class="tag tag-group">${esc(g)}</span>`).join('')}</div>` : '';
 function tag(p) {
   let t = '';
   if (p.kind === 'acq') t += '<span class="tag tag-acq">Acquaintance</span>';
@@ -1306,7 +1309,7 @@ function renderPeople() {
     else { label = 'Check in'; st = s.tSkipped ? '<span class="muted">Skipped</span>' : status(statusOf(s.tRatio), dueIn(s.textRem)); }
     h += `<div class="row simple" ${RB} onclick="App.detail('${p.id}')">
       <span class="dot s-${s.status}" title="${STATUS_LABEL[s.status]}"></span>
-      <div class="row-main"><div class="name">${esc(p.name)}</div>${meta(p, [s.lastAny ? `last contact ${ago(since(s.lastAny))}` : ''])}${prog}</div>
+      <div class="row-main"><div class="name">${esc(p.name)}</div>${meta(p, [s.lastAny ? `last contact ${ago(since(s.lastAny))}` : ''])}${groupTags(p)}${prog}</div>
       <div class="cell right"><span class="cell-label">${label}</span>${st}</div>
     </div>`;
   }
