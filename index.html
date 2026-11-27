@@ -545,7 +545,7 @@ body:not([data-view=week]):not([data-view=calendar]):not([data-view=people]) .fa
    Internally, in-person interactions use the type key 'hangout'. */
 
 const KEY = 'orbit.v1';
-const APP_VERSION = '13';   // keep in step with VERSION in sw.js
+const APP_VERSION = '14';   // keep in step with VERSION in sw.js
 
 // Default cadences in days. Based on Dunbar's layers and friendship decay research,
 // tuned for early/mid-20s. Editable in Settings and per person.
@@ -681,7 +681,203 @@ function load() {
     return raw;
   } catch { return freshState(); }
 }
-function save() { localStorage.setItem(KEY, JSON.stringify(state)); }
+function save() { localStorage.setItem(KEY, JSON.stringify(state)); Sync.schedulePush(); }
+
+/* ---------- Sync across devices (optional) ----------
+   Off until FIREBASE_CONFIG below is filled in. Local-first: the app always reads and writes this device's
+   copy, so it works offline exactly as before. When signed in, each person, interaction, plan and repeating
+   plan is mirrored as its own Firestore document under users/{uid}/, so edits from different devices merge
+   record by record. A "shadow" of what was last synced tells a new record apart from one deleted elsewhere.
+   Sample data never syncs. */
+const FIREBASE_CONFIG = null;   // paste your Firebase web app config object here, e.g. { apiKey: '...', ... }
+const FB_VERSION = '10.12.2';
+const SYNC_COLLS = ['people', 'logs', 'events', 'series', 'meta'];
+const LOCAL_ONLY_SETTINGS = ['lastBackup', 'backupSnooze', 'installDismissed'];
+// stable JSON (sorted keys) so the same record always serialises the same way on every device
+const canon = v => JSON.stringify(v, (k, x) => x && typeof x === 'object' && !Array.isArray(x)
+  ? Object.keys(x).sort().reduce((o, key) => (o[key] = x[key], o), {}) : x);
+
+const Sync = {
+  status: 'off', error: '', user: null, adapter: null, fb: null,
+  ready: new Set(), shadow: {}, pushTimer: null, renderTimer: null,
+  get allReady() { return SYNC_COLLS.every(c => this.ready.has(c)); },
+
+  localMap(coll) {
+    const out = {};
+    if (coll === 'meta') {
+      const st = {};
+      for (const [k, v] of Object.entries(state.settings)) if (!LOCAL_ONLY_SETTINGS.includes(k)) st[k] = v;
+      out.settings = canon(st);
+      return out;
+    }
+    const sample = new Set(state.people.filter(isSample).map(p => p.id));
+    const allSample = ids => ids.length > 0 && ids.every(id => sample.has(id));
+    if (coll === 'series') {
+      for (const [id, sr] of Object.entries(state.series)) if (!sr.sample && !allSample(sr.tpl.personIds)) out[id] = canon(sr);
+      return out;
+    }
+    const keep = { people: p => !sample.has(p.id), logs: l => !sample.has(l.personId), events: e => !e.sample && !allSample(e.personIds) };
+    for (const r of state[coll]) if (keep[coll](r)) out[r.id] = canon(r);
+    return out;
+  },
+  apply(coll, id, json) {
+    if (coll === 'meta') { if (json) Object.assign(state.settings, JSON.parse(json)); return; }
+    if (coll === 'series') { if (json == null) delete state.series[id]; else state.series[id] = JSON.parse(json); return; }
+    const arr = state[coll], i = arr.findIndex(r => r.id === id);
+    if (json == null) { if (i >= 0) arr.splice(i, 1); return; }
+    const obj = JSON.parse(json);
+    if (coll === 'people') { obj.groups = obj.groups || []; obj.followUps = obj.followUps || []; obj.skip = obj.skip || {}; }
+    if (coll === 'events') obj.personIds = obj.personIds || [];
+    if (i >= 0) arr[i] = obj; else arr.push(obj);
+  },
+  persist() { localStorage.setItem(KEY, JSON.stringify(state)); },
+  saveShadow() { if (this.user) localStorage.setItem('orbit.sync.' + this.user.uid, JSON.stringify(this.shadow)); },
+
+  start(user, adapter) {
+    this.stop(true);
+    this.user = user; this.adapter = adapter; this.ready = new Set(); this.status = 'connecting'; this.error = '';
+    try { this.shadow = JSON.parse(localStorage.getItem('orbit.sync.' + user.uid)) || {}; } catch { this.shadow = {}; }
+    for (const c of SYNC_COLLS) adapter.listen(c, remote => this.reconcile(c, remote), changes => this.incoming(c, changes));
+    this.refresh();
+  },
+  stop(silent) {
+    this.adapter?.stop();
+    this.adapter = null; this.user = null; this.ready = new Set(); clearTimeout(this.pushTimer);
+    if (!silent) { this.status = this.fb ? 'signedout' : this.status; this.refresh(); }
+  },
+
+  // first server snapshot for a collection: merge it with this device's copy
+  reconcile(coll, remote) {
+    const local = this.localMap(coll), sh = this.shadow[coll] = this.shadow[coll] || {};
+    let changed = false;
+    for (const id of new Set([...Object.keys(local), ...Object.keys(remote), ...Object.keys(sh)])) {
+      const L = local[id], R = remote[id], S = sh[id];
+      if (L === R) { if (L === undefined) delete sh[id]; else sh[id] = L; continue; }
+      if (R === undefined) {
+        if (L === undefined) delete sh[id];
+        else if (S !== undefined && L === S) { this.apply(coll, id, null); delete sh[id]; changed = true; }   // deleted on another device
+        else { this.adapter.set(coll, id, L); sh[id] = L; }                                                   // added (or edited) here
+      } else if (L === undefined) {
+        if (S !== undefined && S === R) { this.adapter.del(coll, id); delete sh[id]; }                       // deleted here while offline
+        else { this.apply(coll, id, R); sh[id] = R; changed = true; }                                         // added or changed elsewhere
+      } else if (R === S) { this.adapter.set(coll, id, L); sh[id] = L; }                                      // changed here
+      else { this.apply(coll, id, R); sh[id] = R; changed = true; }                                           // changed elsewhere (wins a tie)
+    }
+    this.ready.add(coll);
+    this.saveShadow();
+    if (changed) this.persist();
+    if (this.allReady) { this.status = 'synced'; this.push(); }
+    this.refresh();
+  },
+  // live changes from other devices
+  incoming(coll, changes) {
+    if (!this.ready.has(coll)) return;
+    const sh = this.shadow[coll], local = this.localMap(coll);
+    let changed = false;
+    for (const c of changes) {
+      if (c.local) continue;                      // our own write echoing back
+      if (c.type === 'removed') {
+        if (local[c.id] !== undefined) { this.apply(coll, c.id, null); delete local[c.id]; changed = true; }
+        delete sh[c.id];
+      } else {
+        if (local[c.id] !== c.json) { this.apply(coll, c.id, c.json); local[c.id] = c.json; changed = true; }
+        sh[c.id] = c.json;
+      }
+    }
+    this.saveShadow();
+    if (changed) { this.persist(); this.refresh(); }
+  },
+  // send local edits: anything that differs from what was last synced
+  push() {
+    if (!this.adapter) return;
+    let wrote = false;
+    for (const coll of SYNC_COLLS) {
+      if (!this.ready.has(coll)) continue;
+      const local = this.localMap(coll), sh = this.shadow[coll];
+      for (const [id, json] of Object.entries(local)) if (sh[id] !== json) { this.adapter.set(coll, id, json); sh[id] = json; wrote = true; }
+      for (const id of Object.keys(sh)) if (local[id] === undefined) { this.adapter.del(coll, id); delete sh[id]; wrote = true; }
+    }
+    this.saveShadow();
+    if (wrote && this.adapter.settled) {
+      this.status = navigator.onLine === false ? 'offline' : 'saving'; this.refresh();
+      this.adapter.settled().then(() => { if (this.user) { this.status = 'synced'; this.refresh(); } });
+    }
+  },
+  schedulePush() {
+    if (!this.adapter || !this.ready.size) return;
+    clearTimeout(this.pushTimer);
+    this.pushTimer = setTimeout(() => this.push(), 250);
+  },
+  // re-render soon, but never while you're typing in a field on the page
+  refresh() {
+    clearTimeout(this.renderTimer);
+    this.renderTimer = setTimeout(() => {
+      const a = document.activeElement;
+      if (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName || '') && $('#main')?.contains?.(a)) return this.refresh();
+      if (typeof render === 'function') render();
+    }, 150);
+  },
+  fail(e) {
+    this.error = Sync.friendly(e);
+    if (/permission/i.test(e?.code || '')) this.status = 'error';
+    this.refresh();
+  },
+  friendly(e) {
+    const c = e?.code || '';
+    if (/invalid-credential|wrong-password|user-not-found|invalid-login/.test(c)) return `That email and password don't match.`;
+    if (/email-already-in-use/.test(c)) return 'There is already an account with that email. Sign in instead.';
+    if (/weak-password/.test(c)) return 'Use a password with at least 6 characters.';
+    if (/invalid-email/.test(c)) return `That email address doesn't look right.`;
+    if (/network-request-failed|unavailable/.test(c)) return 'No connection right now. Try again when you are online.';
+    if (/operation-not-allowed/.test(c)) return 'Email sign-in is not turned on in Firebase yet.';
+    if (/permission-denied/.test(c)) return 'Firebase rules are blocking sync. Check the Firestore rules.';
+    if (/too-many-requests/.test(c)) return 'Too many attempts. Wait a minute and try again.';
+    return 'Something went wrong with sync. Try again.';
+  },
+
+  // load Firebase only when it's configured and the app is on its website
+  async boot() {
+    if (!FIREBASE_CONFIG || !isHosted()) return;
+    this.status = 'loading'; this.error = ''; this.refresh();
+    try {
+      const base = `https://www.gstatic.com/firebasejs/${FB_VERSION}`;
+      const [appM, A, F] = await Promise.all([import(`${base}/firebase-app.js`), import(`${base}/firebase-auth.js`), import(`${base}/firebase-firestore.js`)]);
+      const app = appM.initializeApp(FIREBASE_CONFIG);
+      let db;
+      try { db = F.initializeFirestore(app, { localCache: F.persistentLocalCache({ tabManager: F.persistentMultipleTabManager() }) }); }
+      catch { db = F.getFirestore(app); }
+      this.fb = { A, F, db, auth: A.getAuth(app) };
+      this.status = 'signedout';
+      A.onAuthStateChanged(this.fb.auth, user => user ? this.start(user, this.firebaseAdapter(user.uid)) : this.stop());
+    } catch (e) {
+      this.status = 'error'; this.error = `Couldn't reach sync. It will try again when you're back online.`; this.refresh();
+    }
+  },
+  firebaseAdapter(uid) {
+    const { F, db } = this.fb, unsubs = [];
+    const ref = (c, id) => F.doc(db, 'users', uid, c, id);
+    return {
+      set: (c, id, json) => F.setDoc(ref(c, id), { d: json, t: F.serverTimestamp() }).catch(e => this.fail(e)),
+      del: (c, id) => F.deleteDoc(ref(c, id)).catch(e => this.fail(e)),
+      settled: () => F.waitForPendingWrites(db).catch(() => {}),
+      listen: (c, onInitial, onChanges) => {
+        let initial = false;
+        unsubs.push(F.onSnapshot(F.collection(db, 'users', uid, c), { includeMetadataChanges: true }, snap => {
+          if (!initial) {
+            if (snap.metadata.fromCache) return;            // wait for the server's answer before merging
+            initial = true;
+            const m = {}; snap.docs.forEach(d => { m[d.id] = d.data().d; });
+            onInitial(m); return;
+          }
+          const ch = snap.docChanges().map(x => ({ type: x.type, id: x.doc.id, json: x.doc.data()?.d, local: x.doc.metadata.hasPendingWrites }));
+          if (ch.length) onChanges(ch);
+          if (this.allReady && this.status !== 'saving') { const s = snap.metadata.fromCache ? 'offline' : 'synced'; if (s !== this.status) { this.status = s; this.refresh(); } }
+        }, e => this.fail(e)));
+      },
+      stop: () => unsubs.splice(0).forEach(u => u()),
+    };
+  },
+};
 
 let state = load();
 let view = 'week';
@@ -802,13 +998,15 @@ function stepDate(d, repeat, day) {
   return null;
 }
 function materialize(until) {
+  if (Sync.user && !Sync.allReady) return;   // wait until this device has the latest plans
   let changed = false;
   const t = today();
   for (const [sid, sr] of Object.entries(state.series)) {
     if (!sr.repeat) continue;
     let next = stepDate(sr.lastGen, sr.repeat, sr.day), guard = 0;
     while (next && next <= until && guard++ < 500) {
-      if (next >= t) state.events.push({ id: uid(), ...sr.tpl, personIds: [...sr.tpl.personIds], date: next, done: false, seriesId: sid });
+      const oid = `${sid}_${next}`;   // the same id on every device, so synced copies never duplicate
+      if (next >= t && !state.events.some(e => e.id === oid)) state.events.push({ id: oid, ...sr.tpl, personIds: [...sr.tpl.personIds], date: next, done: false, seriesId: sid });
       sr.lastGen = next; changed = true;
       next = stepDate(next, sr.repeat, sr.day);
     }
@@ -1267,6 +1465,22 @@ function renderScience() {
 }
 
 /* settings */
+const SYNC_LABEL = { loading: 'Connecting…', connecting: 'Syncing…', synced: 'Synced', saving: 'Saving…', offline: 'Offline, will sync when back online', signedout: 'Not signed in', error: 'Not connected' };
+function syncSectionHtml() {
+  if (!FIREBASE_CONFIG || !isHosted()) return '';
+  const head = `<div class="section"><div class="eyebrow">Sync</div><div class="section-note">${SYNC_LABEL[Sync.status] || ''}</div></div>`;
+  const err = Sync.error ? `<p class="small" style="color:var(--overdue);margin:0 0 10px">${esc(Sync.error)}</p>` : '';
+  if (Sync.user) return `${head}${err}<p class="muted small" style="margin:0;max-width:560px">Signed in as <b style="color:var(--ink)">${esc(Sync.user.email || '')}</b>. Changes sync to every device signed in to this account.</p>
+    <div class="actions"><button class="btn btn-sm" onclick="App.syncSignOut()">Sign out</button></div>`;
+  if (Sync.status === 'loading') return `${head}<p class="muted small" style="margin:0">Connecting…</p>`;
+  if (!Sync.fb) return `${head}${err}<div class="actions"><button class="btn btn-sm" onclick="Sync.boot()">Try again</button></div>`;
+  return `${head}${err}<p class="muted small" style="margin:0 0 12px;max-width:560px">Sign in with the same account on each device to keep them in sync. Without it, everything stays on this device only.</p>
+    <div class="two" style="max-width:520px;gap:8px">
+      <input id="s-email" type="email" autocomplete="username" autocapitalize="off" placeholder="Email">
+      <input id="s-pass" type="password" autocomplete="current-password" placeholder="Password" onkeydown="if(event.key==='Enter')App.syncAuth(false)">
+    </div>
+    <div class="actions"><button class="btn btn-primary btn-sm" onclick="App.syncAuth(false)">Sign in</button><button class="btn btn-sm" onclick="App.syncAuth(true)">Create account</button><button class="btn btn-quiet btn-sm" onclick="App.syncReset()">Forgot password?</button></div>`;
+}
 function renderSettings() {
   const st = state.settings, iv = st.intervals, c = st.weekCaps;
   const row = (k, l) => `<tr><td>${LEVELS[k][l].label}<span class="hint">${esc(LEVELS[k][l].hint)}</span></td>
@@ -1289,8 +1503,11 @@ function renderSettings() {
   <div class="rows"><div class="row simple" ${RB} onclick="App.go('science')"><span class="dot s-plan"></span>
     <div class="row-main"><div class="name">Research</div><div class="meta"><span>How Orbit decides who to suggest and how often</span></div></div></div></div>
 
+  ${syncSectionHtml()}
   <div class="section"><div class="eyebrow">Data</div><div class="section-note">${st.lastBackup ? `Last backup ${nice(st.lastBackup)}` : 'No backup yet'}</div></div>
-  <p class="muted small" style="margin:0;max-width:560px">${isStandalone()
+  <p class="muted small" style="margin:0;max-width:560px">${Sync.user
+    ? `This device keeps its own copy, and every change syncs to your account. Backups are an extra safety net.`
+    : isStandalone()
     ? `Everything is stored on this device, inside the Orbit app. Nothing is uploaded anywhere. Removing Orbit from your Home Screen deletes its data, so export a backup now and then (Save to Files or iCloud Drive works well).`
     : `Everything is stored in this browser on this device. Nothing is uploaded anywhere. Clearing your browser data would erase it, so export a backup now and then. A backup file also moves your data to another device: export here, AirDrop the file to your phone, then import it in Orbit there.`}</p>
   <div class="actions">
@@ -2030,6 +2247,29 @@ const App = {
       } else toast(`You're up to date. Version ${APP_VERSION} is the newest one online.`);
     } catch { toast(`Couldn't check right now. Try again when you're online.`); }
   },
+  async syncAuth(create) {
+    const email = $('#s-email').value.trim(), pw = $('#s-pass').value;
+    if (!email || !pw) { toast('Enter your email and a password.'); return; }
+    const { A, auth } = Sync.fb;
+    Sync.error = '';
+    try {
+      if (create) await A.createUserWithEmailAndPassword(auth, email, pw);
+      else await A.signInWithEmailAndPassword(auth, email, pw);
+      toast(create ? 'Account created. Syncing this device…' : 'Signed in. Syncing this device…');
+    } catch (e) { Sync.error = Sync.friendly(e); render(); }
+  },
+  async syncReset() {
+    const email = $('#s-email').value.trim();
+    if (!email) { toast('Type your email first, then tap Forgot password.'); return; }
+    try { await Sync.fb.A.sendPasswordResetEmail(Sync.fb.auth, email); toast('Password reset email sent.'); }
+    catch (e) { Sync.error = Sync.friendly(e); render(); }
+  },
+  async syncSignOut() {
+    if (!confirm('Sign out on this device? Your data stays here, but it stops syncing until you sign in again.')) return;
+    Sync.stop();
+    await Sync.fb.A.signOut(Sync.fb.auth).catch(() => {});
+    toast('Signed out. This device keeps its copy.');
+  },
   dismissInstall() { state.settings.installDismissed = true; save(); render(); },
   async install() { if (!installPrompt) return; installPrompt.prompt(); await installPrompt.userChoice.catch(() => {}); installPrompt = null; render(); },
   importData(file) {
@@ -2039,13 +2279,13 @@ const App = {
       try {
         const d = JSON.parse(r.result);
         if (!Array.isArray(d.people) || !Array.isArray(d.logs)) throw 0;
-        if (!confirm(`Replace your current data with this backup (${d.people.length} people, ${d.logs.length} interactions)?`)) return;
+        if (!confirm(`Replace your current data with this backup (${d.people.length} people, ${d.logs.length} interactions)?${Sync.user ? ' This also replaces the data synced to your account.' : ''}`)) return;
         localStorage.setItem(KEY, JSON.stringify(d)); state = load(); save(); render(); toast('Backup imported');
       } catch { alert(`That file doesn't look like an Orbit backup.`); }
     };
     r.readAsText(file);
   },
-  wipe() { if (confirm('Erase all people, plans and history? Export a backup first if you might want it.')) { state = freshState(); save(); render(); } },
+  wipe() { if (confirm(`Erase all people, plans and history? ${Sync.user ? 'This also erases it from your account and every signed-in device. ' : ''}Export a backup first if you might want it.`)) { state = freshState(); save(); render(); } },
   removeSample() {
     const ids = new Set(state.people.filter(isSample).map(p => p.id));
     if (!ids.size) return;
@@ -2086,7 +2326,7 @@ const App = {
     mk('chris', 'Chris (sample)', 'friend', 3, { metAt: 'Work', promotedAt: d(10) }, [['hangout', 80, 10], ['hangout', 60, 15], ['hangout', 40, 12], ['hangout', 25, 8], ['hangout', 11, 6], ['text', 3]]);
     const climb = { id: uid(), sample: true, title: 'Climbing', date: addDays(t, 2), time: '18:30', hours: 2, personIds: [ids.sam], location: 'Bouldering gym', note: '', done: false };
     const sid = uid(); climb.seriesId = sid;
-    state.series[sid] = { repeat: 'weekly', lastGen: climb.date, day: parseD(climb.date).getDate(), tpl: tplOf(climb) };
+    state.series[sid] = { sample: true, repeat: 'weekly', lastGen: climb.date, day: parseD(climb.date).getDate(), tpl: tplOf(climb) };
     state.events.push(climb);
     state.events.push({ id: uid(), sample: true, title: 'Game night', date: addDays(t, 4), time: '19:00', hours: 3, personIds: [ids.riley, ids.priya], location: '', note: '', done: false });
     save(); render(); toast('Sample data loaded');
@@ -2098,6 +2338,9 @@ let renderedDay = today();
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { renderedDay = today(); render(); } });
 setInterval(() => { if (today() !== renderedDay) { renderedDay = today(); render(); } }, 60000);
 try { navigator.storage?.persist?.(); } catch {}
+Sync.boot();
+window.addEventListener('online', () => { if (!Sync.fb) Sync.boot(); else if (Sync.user && Sync.status === 'offline') { Sync.status = 'synced'; Sync.refresh(); } });
+window.addEventListener('offline', () => { if (Sync.user) { Sync.status = 'offline'; Sync.refresh(); } });
 // Offline support. Checks for a newer version on launch and whenever the app comes back to the foreground,
 // and reloads once when one is installed, so you're never stuck on an old copy.
 if (isHosted() && 'serviceWorker' in navigator) {
