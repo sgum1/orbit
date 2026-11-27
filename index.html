@@ -545,7 +545,7 @@ body:not([data-view=week]):not([data-view=calendar]):not([data-view=people]) .fa
    Internally, in-person interactions use the type key 'hangout'. */
 
 const KEY = 'orbit.v1';
-const APP_VERSION = '12';   // keep in step with VERSION in sw.js
+const APP_VERSION = '13';   // keep in step with VERSION in sw.js
 
 // Default cadences in days. Based on Dunbar's layers and friendship decay research,
 // tuned for early/mid-20s. Editable in Settings and per person.
@@ -1285,7 +1285,7 @@ function renderSettings() {
     <div class="field" style="margin-top:0"><label>Check-ins per week</label><input type="number" min="1" value="${c.text}" onchange="App.setCap('text',this.value)"></div>
   </div>
 
-  <div class="section"><div class="eyebrow">About</div><div class="section-note">Version ${APP_VERSION}</div></div>
+  <div class="section"><div class="eyebrow">About</div><div class="section-note">Version ${APP_VERSION}${isHosted() ? ` · <button class="linkish" onclick="App.checkUpdate()">Check for updates</button>` : ''}</div></div>
   <div class="rows"><div class="row simple" ${RB} onclick="App.go('science')"><span class="dot s-plan"></span>
     <div class="row-main"><div class="name">Research</div><div class="meta"><span>How Orbit decides who to suggest and how often</span></div></div></div></div>
 
@@ -2014,6 +2014,21 @@ const App = {
     if (!okd) return;
     state.settings.lastBackup = today(); save(); render();
     toast('Backup saved. Keep it somewhere safe, like iCloud Drive.');
+  },
+  async checkUpdate() {
+    toast('Checking for updates…');
+    try {
+      const res = await fetch(`sw.js?t=${Date.now()}`, { cache: 'no-store' });
+      const live = ((await res.text()).match(/orbit-v(\d+)/) || [])[1];
+      if (!live) throw 0;
+      if (+live > +APP_VERSION) {
+        toast(`Updating to version ${live}…`);
+        const reg = await navigator.serviceWorker?.getRegistration();
+        await reg?.update().catch(() => {});
+        if (window.caches) await Promise.all((await caches.keys()).map(k => caches.delete(k)));
+        setTimeout(() => location.reload(), 400);
+      } else toast(`You're up to date. Version ${APP_VERSION} is the newest one online.`);
+    } catch { toast(`Couldn't check right now. Try again when you're online.`); }
   },
   dismissInstall() { state.settings.installDismissed = true; save(); render(); },
   async install() { if (!installPrompt) return; installPrompt.prompt(); await installPrompt.userChoice.catch(() => {}); installPrompt = null; render(); },

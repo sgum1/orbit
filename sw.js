@@ -4,12 +4,12 @@
    Strategy
    - The app page and its manifest: network first. When online you always get the latest version
      (revalidated with GitHub so its 10-minute HTTP cache can't serve a stale copy). If the network
-     fails or takes longer than a few seconds, the saved copy is used, so it still works offline.
+     fails (offline) or is very slow, the saved copy is used, so it still works without signal.
    - Icons: cache first. They rarely change.
    Bump VERSION when releasing so old caches are cleared. */
-const VERSION = 'orbit-v12';
+const VERSION = 'orbit-v13';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './icons/apple-touch-icon.png', './icons/icon-192.png', './icons/icon-512.png'];
-const NETWORK_TIMEOUT_MS = 4000;
+const NETWORK_TIMEOUT_MS = 10000;   // offline fails fast anyway; only very slow networks fall back
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION)
@@ -32,7 +32,7 @@ function networkFirst(req, key) {
       if (cached && !settled) { settled = true; resolve(cached); }
     };
     const timer = setTimeout(useCache, NETWORK_TIMEOUT_MS);
-    fetch(req, { cache: 'no-cache' }).then(res => {
+    fetch(new Request(req.url, { cache: 'no-cache', credentials: 'same-origin' })).then(res => {
       clearTimeout(timer);
       if (res.ok) cache.put(key, res.clone());
       if (!settled) { settled = true; resolve(res); }
@@ -48,6 +48,7 @@ self.addEventListener('fetch', e => {
   const req = e.request;
   const url = new URL(req.url);
   if (req.method !== 'GET' || url.origin !== self.location.origin) return;
+  if (url.pathname.endsWith('/sw.js')) return;   // update checks always go straight to the network
   if (req.mode === 'navigate' || url.pathname.endsWith('/') || url.pathname.endsWith('.html') || url.pathname.endsWith('.webmanifest')) {
     e.respondWith(networkFirst(req, req.mode === 'navigate' ? './index.html' : req));
     return;
