@@ -187,7 +187,7 @@ select.inline{width:auto}
 .bar.ink span{background:var(--ink)}
 
 /* stats */
-.stats{display:grid;grid-template-columns:repeat(5,1fr);border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-top:32px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-top:32px}
 .stat{padding:20px 16px 20px 0}
 .stat + .stat{padding-left:18px;border-left:1px solid var(--line)}
 .stat b{display:block;font-family:var(--serif);font-weight:400;font-size:32px;letter-spacing:-.02em;line-height:1.1}
@@ -360,10 +360,6 @@ main.wrap{padding-top:56px;padding-bottom:120px}
 .pill-opt:hover span{border-color:var(--faint)}
 .pill-opt input:checked + span{background:var(--ink);border-color:var(--ink);color:var(--bg)}
 .pill-opt.acq input:checked + span{background:var(--acq);border-color:var(--acq);color:#fff}
-.hour-chips{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:20px}
-.hchip{height:56px;border:1px solid var(--line);border-radius:12px;background:var(--surface);font-size:17px;font-weight:500;cursor:pointer;font-family:var(--serif)}
-.hchip:hover{border-color:var(--ink)}
-.hchip:active{background:var(--ink);color:var(--bg)}
 .more summary{margin-top:22px;font-size:13px}
 .more[open] summary{margin-bottom:-4px}
 .ring{width:18px;height:18px;border-radius:50%;border:1.5px dashed var(--due)}
@@ -517,7 +513,6 @@ body:not([data-view=week]):not([data-view=calendar]):not([data-view=people]) .fa
   .todo-name{font-size:16px}
   .todo-sub,.todo-note{font-size:13.5px}
   .pill-opt span{height:38px;padding:0 15px;font-size:14.5px}
-  .hchip{height:60px}
   .three input{padding:8px 9px}
   .combo-box{min-height:44px;padding:5px 7px}
   .combo-box input{height:32px;font-size:16px}
@@ -545,7 +540,7 @@ body:not([data-view=week]):not([data-view=calendar]):not([data-view=people]) .fa
    Internally, in-person interactions use the type key 'hangout'. */
 
 const KEY = 'orbit.v1';
-const APP_VERSION = '16';   // keep in step with VERSION in sw.js
+const APP_VERSION = '17';   // keep in step with VERSION in sw.js
 
 // Default cadences in days. Based on Dunbar's layers and friendship decay research,
 // tuned for early/mid-20s. Editable in Settings and per person.
@@ -564,8 +559,9 @@ const LEVELS = {
 };
 const WEIGHT = { friend: {1:1.45, 2:1.3, 3:1.12, 4:1}, acq: {1:1.38, 2:1.15, 3:1} };
 const MAX_RATIO = 3;   // stops one long-neglected person from outranking everyone closer
-// Hall (2019): approximate hours together to reach each level.
-const MILESTONES = [ {h:50, label:'Casual friend'}, {h:90, label:'Friend'}, {h:200, label:'Close friend'} ];
+// Hall (2019): about 50 hours together turns an acquaintance into a casual friend.
+// Orbit counts meetups instead of hours; at a few hours each, about 20 meetups is roughly that.
+const MEET_GOAL = 20;
 const TYPE_LABEL = { text: 'Text', call: 'Call', hangout: 'In person' };
 const REPEAT_LABEL = { '': 'Does not repeat', weekly: 'Every week', biweekly: 'Every 2 weeks', monthly: 'Every month' };
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -586,7 +582,6 @@ const hash = s => { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0))
 const pick = (arr, seed) => arr[hash(seed) % arr.length];
 const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
 const people = n => n === 1 ? '1 person' : `${n} people`;
-const fmtH = h => `${Math.round(h * 10) / 10}h`;
 const weekStart = s => addDays(s, -((parseD(s).getDay() + 6) % 7));   // Monday
 const wd = s => parseD(s).toLocaleDateString(undefined, { weekday: 'short' });
 const maxDate = arr => arr.filter(Boolean).reduce((m, x) => (!m || x > m ? x : m), null);
@@ -933,7 +928,7 @@ function refs(p, before) {
 function stats(p) {
   const logs = state.logs.filter(l => l.personId === p.id).sort((a, b) => b.date.localeCompare(a.date) || (b.ts || 0) - (a.ts || 0));
   const r = refs(p);
-  const hours = logs.filter(l => l.type === 'hangout').reduce((s, l) => s + (+l.hours || 0), 0);
+  const meets = logs.filter(l => l.type === 'hangout').length;
   const noteLog = logs.find(l => l.note && !l.eventId) || logs.find(l => l.note);
   const iv = intervals(p);
   const tDays = since(r.refText), hDays = since(r.refHang);
@@ -944,7 +939,7 @@ function stats(p) {
   const remote = !!p.remote;
   const upcoming = state.events.filter(e => !e.done && e.date >= today() && e.personIds.includes(p.id)).sort(byDate);
   return {
-    logs, lastAny: r.lastAny, lastHang: r.lastHang, hours, noteLog, iv, tDays, hDays, tRatio, hRatio, tSkipped, hSkipped, upcoming, remote,
+    logs, lastAny: r.lastAny, lastHang: r.lastHang, meets, noteLog, iv, tDays, hDays, tRatio, hRatio, tSkipped, hSkipped, upcoming, remote,
     textRem: iv.text - tDays, hangRem: iv.hang - hDays,
     tScore: Math.min(tRatio, MAX_RATIO) * w, hScore: remote ? 0 : Math.min(hRatio, MAX_RATIO) * w,
     status: !remote && upcoming.length && hRatio >= 0.75 ? 'soon' : statusOf(Math.max(tSkipped ? 0 : tRatio, hSkipped || remote ? 0 : hRatio)),
@@ -1205,10 +1200,10 @@ function renderWeek() {
     for (const it of plan.see) {
       const { p } = it, s = stats(p), e = it.planned;
       const seen = s.lastHang ? `last seen ${ago(since(s.lastHang))}` : 'not seen yet';
-      if (it.done) h += todoRow({ p, kind: 'see', done: true, tickClass: 'done', tickAction: `App.detail('${p.id}')`, tickLabel: 'Done', sub: `Saw them ${shortDay(it.done.date)}${+it.done.hours ? ` · ${fmtH(+it.done.hours)}` : ''}`, right: status('good', 'Done') });
+      if (it.done) h += todoRow({ p, kind: 'see', done: true, tickClass: 'done', tickAction: `App.detail('${p.id}')`, tickLabel: 'Done', sub: `Saw them ${shortDay(it.done.date)}`, right: status('good', 'Done') });
       else if (e && e.date < t) h += todoRow({ p, kind: 'see', tickAction: `App.confirmEvent('${e.id}')`, tickLabel: 'It happened', sub: `${e.title} · ${eventWhen(e)}`, right: status('due', 'Did it happen?') });
-      else if (e) h += todoRow({ p, kind: 'see', tickClass: 'plan', tickAction: `App.timeSheet('${p.id}')`, tickLabel: 'Log time together', sub: `${e.title} · ${wd(e.date)}${e.time ? ' ' + fmtTime(e.time) : ''}`, right: status('plan', `Planned ${e.date > plan.we ? relDay(e.date) : wd(e.date)}`), note: todoNote(p) });
-      else h += todoRow({ p, kind: 'see', tickAction: `App.timeSheet('${p.id}')`, tickLabel: 'Log time together', sub: `${levelInfo(p).label} · ${seen}`, right: dueStatus(it.due), note: todoNote(p) });
+      else if (e) h += todoRow({ p, kind: 'see', tickClass: 'plan', tickAction: `App.logMeet('${p.id}')`, tickLabel: 'Saw them', sub: `${e.title} · ${wd(e.date)}${e.time ? ' ' + fmtTime(e.time) : ''}`, right: status('plan', `Planned ${e.date > plan.we ? relDay(e.date) : wd(e.date)}`), note: todoNote(p) });
+      else h += todoRow({ p, kind: 'see', tickAction: `App.logMeet('${p.id}')`, tickLabel: 'Saw them', sub: `${levelInfo(p).label} · ${seen}`, right: dueStatus(it.due), note: todoNote(p) });
     }
     h += `</div>`;
   }
@@ -1257,15 +1252,14 @@ function renderCalendar() {
       ${bdays.map(p => `<button class="ev bday" onclick="App.detail('${p.id}')"><span class="t">Birthday</span><b>${esc(p.name)}</b></button>`).join('')}
       ${evs.map(e => `<button class="ev ${e.done ? 'done' : e.date < t ? 'confirm' : ''}" onclick="App.eventForm('${e.id}')">
         <span class="t">${e.time ? fmtTime(e.time) : 'Any time'}${seriesOf(e)?.repeat ? ' · repeats' : ''}</span><b>${esc(e.title)}</b>${e.personIds.length ? `<span class="who">${esc(names(e.personIds).join(', '))}</span>` : ''}</button>`).join('')}
-      ${inPerson.map(l => `<button class="ev log" onclick="App.detail('${l.personId}')"><span class="t">In person${+l.hours ? ' · ' + fmtH(+l.hours) : ''}</span><b>${esc(person(l.personId).name)}</b>${l.note ? `<span class="who">${esc(l.note)}</span>` : ''}</button>`).join('')}
+      ${inPerson.map(l => `<button class="ev log" onclick="App.detail('${l.personId}')"><span class="t">In person</span><b>${esc(person(l.personId).name)}</b>${l.note ? `<span class="who">${esc(l.note)}</span>` : ''}</button>`).join('')}
       <button class="day-add" onclick="App.eventForm(null,{date:'${d}'})">+ Add</button>
       </div>
     </div>`;
   }
   h += `</div>`;
-  const hrs = logsW.filter(l => l.type === 'hangout').reduce((s, l) => s + (+l.hours || 0), 0);
   const seen = new Set(logsW.filter(l => l.type === 'hangout').map(l => l.personId)).size;
-  h += `<div class="cal-sum"><span><b>${evsW.length}</b> ${evsW.length === 1 ? 'activity' : 'activities'}</span><span><b>${people(seen)}</b> seen in person</span><span><b>${fmtH(hrs)}</b> together</span></div>`;
+  h += `<div class="cal-sum"><span><b>${evsW.length}</b> ${evsW.length === 1 ? 'activity' : 'activities'}</span><span><b>${people(seen)}</b> seen in person</span></div>`;
   return h;
 }
 
@@ -1304,7 +1298,7 @@ function renderPeople() {
   h += `<div class="rows" style="margin-top:28px">`;
   for (const p of ppl) {
     const s = S.get(p.id);
-    const prog = p.kind === 'acq' ? `<div class="bar" style="margin-top:9px;max-width:200px" title="${fmtH(s.hours)} of about 50h to casual friend"><span style="width:${Math.min(100, s.hours / 50 * 100)}%"></span></div>` : '';
+    const prog = p.kind === 'acq' ? `<div class="bar" style="margin-top:9px;max-width:200px" title="Seen ${plural(s.meets, 'time')} of about ${MEET_GOAL}"><span style="width:${Math.min(100, s.meets / MEET_GOAL * 100)}%"></span></div>` : '';
     // one status: whichever is more pressing
     let label, st;
     if (!p.remote && s.upcoming[0]) { label = 'See'; st = status('plan', `Planned ${relDay(s.upcoming[0].date)}`); }
@@ -1327,7 +1321,6 @@ function renderInsights() {
   const cutoff = addDays(today(), -30);
   const recent = state.logs.filter(l => l.date > cutoff && l.date <= today() && person(l.personId));
   const cnt = t => recent.filter(l => l.type === t).length;
-  const hrs = recent.filter(l => l.type === 'hangout').reduce((s, l) => s + (+l.hours || 0), 0);
   const onTrack = ppl.filter(p => S.get(p.id).tRatio < 1 && (p.remote || S.get(p.id).hRatio < 1 || S.get(p.id).upcoming.length)).length;
   const reached = new Set(recent.map(l => l.personId)).size;
 
@@ -1337,7 +1330,6 @@ function renderInsights() {
     <div class="stat"><b>${reached}</b><span>People reached</span></div>
     <div class="stat"><b>${cnt('text') + cnt('call')}</b><span>Texts and calls</span></div>
     <div class="stat"><b>${cnt('hangout')}</b><span>Times in person</span></div>
-    <div class="stat"><b>${fmtH(hrs)}</b><span>Time together</span></div>
   </div>`;
 
   // tier check
@@ -1361,8 +1353,8 @@ function renderInsights() {
   }
   h += `</table><p class="muted small" style="margin-top:14px;max-width:620px">Each layer is about three times the size of the one inside it. Only a handful of people can stay at weekly closeness at once, so honest tiers keep suggestions realistic.</p>`;
 
-  const acqs = ppl.filter(p => p.kind === 'acq').sort((a, b) => S.get(b.id).hours - S.get(a.id).hours);
-  h += `<div class="section"><div class="eyebrow">Acquaintances<span>${acqs.length}</span></div><div class="section-note">About 50 hours to a casual friendship (Hall, 2019)</div></div>`;
+  const acqs = ppl.filter(p => p.kind === 'acq').sort((a, b) => S.get(b.id).meets - S.get(a.id).meets);
+  h += `<div class="section"><div class="eyebrow">Acquaintances<span>${acqs.length}</span></div><div class="section-note">About ${MEET_GOAL} meetups to a casual friendship</div></div>`;
   if (!acqs.length) h += `<p class="muted">No acquaintances yet. <button class="linkish" onclick="App.personForm(null,'acq')">Add someone you've just met</button></p>`;
   else {
     h += `<div class="rows">`;
@@ -1370,15 +1362,15 @@ function renderInsights() {
       const s = S.get(p.id);
       const start = p.metDate || p.created;
       const weeks = Math.max(1, since(start) / 7);
-      const pace = s.hours / weeks;
-      const left = Math.max(0, 50 - s.hours);
-      const eta = left === 0 ? 'Ready to promote' : pace > 0 ? `about ${Math.ceil(left / pace)} weeks to go at this pace` : 'log time together to start';
+      const pace = s.meets / weeks;
+      const left = Math.max(0, MEET_GOAL - s.meets);
+      const eta = left === 0 ? 'Ready to promote' : pace > 0 ? `about ${Math.ceil(left / pace)} weeks to go at this pace` : 'meet up to get started';
       const cold = s.tDays > 45;
       h += `<div class="row simple" ${RB} onclick="App.detail('${p.id}')"><span class="dot s-${s.status}"></span>
         <div class="row-main"><div class="name">${esc(p.name)}</div>
-          <div class="meta"><span>${esc([levelInfo(p).label, `${pace.toFixed(1)}h per week`, eta].join(' · '))}</span>${cold ? status('overdue', 'Going cold') : ''}</div>
-          <div class="bar" style="margin-top:10px"><span style="width:${Math.min(100, s.hours / 50 * 100)}%"></span></div></div>
-        <div class="cell right"><span class="cell-label">Together</span><span>${fmtH(s.hours)} / 50h</span></div></div>`;
+          <div class="meta"><span>${esc([levelInfo(p).label, eta].join(' · '))}</span>${cold ? status('overdue', 'Going cold') : ''}</div>
+          <div class="bar" style="margin-top:10px"><span style="width:${Math.min(100, s.meets / MEET_GOAL * 100)}%"></span></div></div>
+        <div class="cell right"><span class="cell-label">Meetups</span><span>${s.meets} / ${MEET_GOAL}</span></div></div>`;
     }
     h += `</div>`;
   }
@@ -1428,7 +1420,7 @@ function renderScience() {
       `Roberts and Dunbar (2011), Evolution and Human Behavior.`],
     [`Hours make friends`,
       `It takes roughly <b>50 hours</b> together to go from acquaintance to casual friend, about <b>90</b> to become friends, and <b>200 or more</b> to become close friends. Free time spent together counted toward closeness. Time together only at work or school counted much less.`,
-      `Time in person is logged in hours. Each acquaintance has a progress bar toward 50 hours, and Orbit suggests promoting them when they get there.`,
+      `Orbit counts meetups rather than hours. At a few hours each, about ${MEET_GOAL} meetups is roughly 50 hours, so each acquaintance has a progress bar toward ${MEET_GOAL} and Orbit suggests promoting them when they get there.`,
       `Hall (2019), How many hours does it take to make a friend? Journal of Social and Personal Relationships.`],
     [`Start strong with new people`,
       `Seeing someone repeatedly makes you like each other more, and being physically nearby is one of the strongest predictors of who becomes friends. The time you spend together in the first few months after meeting matters a lot.`,
@@ -1604,10 +1596,7 @@ function logFormHtml(pid, type) {
   <div class="field"><label>With</label>${comboHtml(!pid)}</div>
   <div class="field"><label>How</label><div class="pills">
     ${[['text', 'Text'], ['call', 'Call'], ['hangout', 'In person']].map(([v, l]) =>
-      `<label class="pill-opt"><input type="radio" name="l-type" value="${v}" ${type === v ? 'checked' : ''} onchange="App.typeToggle()"><span>${l}</span></label>`).join('')}
-  </div></div>
-  <div class="field" id="l-hours-wrap"><label>How long</label><div class="pills">
-    ${[1, 2, 3, 4, 6].map(h => `<label class="pill-opt"><input type="radio" name="l-hours" value="${h}" ${h === 2 ? 'checked' : ''}><span>${h}h</span></label>`).join('')}
+      `<label class="pill-opt"><input type="radio" name="l-type" value="${v}" ${type === v ? 'checked' : ''}><span>${l}</span></label>`).join('')}
   </div></div>
   <label class="check"><input type="checkbox" id="l-them"><span>They reached out first</span></label>
   <details class="more"><summary>More details</summary>
@@ -1642,10 +1631,7 @@ function eventFormHtml(e) {
     <div class="field"><label>Time</label><input type="time" id="e-time" value="${esc(e.time || '')}"></div>
   </div>
   <details class="more" ${!isNew && (sr?.repeat || e.location || e.note) ? 'open' : ''}><summary>More details</summary>
-    <div class="two">
-      <div class="field"><label>Hours</label><input type="number" id="e-hours" min="0" step="0.5" value="${e.hours ?? 2}"></div>
-      <div class="field"><label>Repeats</label><select id="e-repeat">${Object.entries(REPEAT_LABEL).map(([v, l]) => `<option value="${v}" ${repeat === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
-    </div>
+    <div class="field"><label>Repeats</label><select id="e-repeat">${Object.entries(REPEAT_LABEL).map(([v, l]) => `<option value="${v}" ${repeat === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
     ${sr?.repeat ? `<span class="hint">Changes apply to this and upcoming repeats.</span>` : ''}
     <div class="field"><label>Where</label><input id="e-location" value="${esc(e.location || '')}" placeholder="Optional"></div>
     <div class="field"><label>Notes</label><textarea id="e-note" placeholder="Optional">${esc(e.note || '')}</textarea></div>
@@ -1766,21 +1752,15 @@ const gtagValue = () => [...new Set([...gtag.tags, ...(gtag.q.split(',').map(x =
 
 function detailHtml(p) {
   const s = stats(p);
-  const next = MILESTONES.find(m => s.hours < m.h);
-  let prog;
+  let prog = '';
   if (p.kind === 'acq') {
-    const ready = s.hours >= 50;
+    const ready = s.meets >= MEET_GOAL;
     prog = `<div class="panel">
-      <div class="panel-top"><span class="label" style="color:var(--acq)">Path to friendship</span><span>${fmtH(s.hours)} of about 50h</span></div>
-      <div class="bar"><span style="width:${Math.min(100, s.hours / 50 * 100)}%"></span></div>
-      <p>${ready ? `You've spent about 50 hours together, which is roughly when acquaintances become casual friends.`
-        : `About ${fmtH(50 - s.hours)} more time together before this is likely a casual friendship.`}${p.metDate ? ` Met ${ago(since(p.metDate))}.` : ''}</p>
+      <div class="panel-top"><span class="label" style="color:var(--acq)">Path to friendship</span><span>${s.meets} of about ${MEET_GOAL} meetups</span></div>
+      <div class="bar"><span style="width:${Math.min(100, s.meets / MEET_GOAL * 100)}%"></span></div>
+      <p>${ready ? `You've met up about ${MEET_GOAL} times, which is roughly when acquaintances become casual friends.`
+        : `About ${plural(MEET_GOAL - s.meets, 'more meetup')} before this is likely a casual friendship.`}${p.metDate ? ` Met ${ago(since(p.metDate))}.` : ''}</p>
       <div class="actions" style="margin-top:14px"><button class="btn btn-sm" onclick="App.promoteForm('${p.id}')">Promote to friend</button></div></div>`;
-  } else {
-    const max = next ? next.h : Math.max(200, s.hours);
-    prog = `<div class="panel plain">
-      <div class="panel-top"><span class="label">Time together</span><span>${fmtH(s.hours)}${next ? ` · next: ${next.label.toLowerCase()} at about ${next.h}h` : ' · close friend range'}</span></div>
-      <div class="bar ink"><span style="width:${Math.min(100, s.hours / max * 100)}%"></span></div></div>`;
   }
   const met = [p.metAt, p.metDate ? nice(p.metDate) : ''].filter(Boolean).map(esc).join(', ');
   const b = balance(p);
@@ -1807,7 +1787,7 @@ function detailHtml(p) {
     <div class="actions" style="margin-top:22px">
       <button class="btn btn-sm" onclick="App.quickLog('${p.id}','text',true)">Texted</button>
       <button class="btn btn-sm" onclick="App.quickLog('${p.id}','call',true)">Called</button>
-      <button class="btn btn-sm" onclick="App.timeSheet('${p.id}',0,true)">${p.remote ? 'Visited' : 'Saw them'}</button>
+      <button class="btn btn-sm" onclick="App.logMeet('${p.id}',true)">${p.remote ? 'Visited' : 'Saw them'}</button>
       <button class="btn btn-primary btn-sm" onclick="App.eventForm(null,{personIds:['${p.id}']})">Plan</button>
     </div>
     <button class="linkish small" style="margin-top:10px" onclick="App.quickLog('${p.id}','text',true,'them')">They reached out to me</button>
@@ -1816,7 +1796,7 @@ function detailHtml(p) {
     <div class="inline-add"><input id="fu-text" placeholder="Something to ask about next time" onkeydown="if(event.key==='Enter')App.fuAdd('${p.id}')"><input type="date" id="fu-date" min="${today()}" title="Optional date"><button class="btn btn-sm" onclick="App.fuAdd('${p.id}')">Add</button></div>
     ${upcoming}
     <div class="label" style="margin-top:26px">History</div>
-    <div class="history">${logs.length ? logs.map(l => `<div class="log"><span class="when">${nice(l.date)}</span><span>${TYPE_LABEL[l.type]}${l.type === 'hangout' && +l.hours ? `<span class="muted"> · ${fmtH(+l.hours)}</span>` : ''}${l.by === 'them' ? '<span class="muted"> · they reached out</span>' : ''}${l.note ? `<div class="muted small">${esc(l.note)}</div>` : ''}</span><button class="x" title="Delete" onclick="App.delLog('${l.id}','${p.id}')">&times;</button></div>`).join('')
+    <div class="history">${logs.length ? logs.map(l => `<div class="log"><span class="when">${nice(l.date)}</span><span>${TYPE_LABEL[l.type]}${l.by === 'them' ? '<span class="muted"> · they reached out</span>' : ''}${l.note ? `<div class="muted small">${esc(l.note)}</div>` : ''}</span><button class="x" title="Delete" onclick="App.delLog('${l.id}','${p.id}')">&times;</button></div>`).join('')
       : `<p class="muted small">Nothing logged yet.</p>`}</div>
     ${!histAll && s.logs.length > logs.length ? `<button class="linkish small" style="margin-top:8px" onclick="App.moreHistory('${p.id}')">Show all ${s.logs.length}</button>` : ''}
     <div class="foot">
@@ -1852,10 +1832,8 @@ function newPerson(data) {
   return { id: uid(), created: today(), skip: {}, archived: false, promotedAt: null, groups: [], followUps: [], seed: {}, ...data };
 }
 function milestoneToast(p, before, fallback) {
-  const after = stats(p).hours;
-  const crossed = MILESTONES.find(m => before < m.h && after >= m.h);
-  if (p.kind === 'acq' && before < 50 && after >= 50) { App.detail(p.id); toast(`${esc(p.name)} has reached about 50 hours. Consider promoting them to friend.`); }
-  else if (crossed && p.kind === 'friend') toast(`${esc(p.name)}: ${crossed.h}+ hours together, about ${crossed.label.toLowerCase()} level`);
+  const after = stats(p).meets;
+  if (p.kind === 'acq' && before < MEET_GOAL && after >= MEET_GOAL) { App.detail(p.id); toast(`You've met up with ${esc(p.name)} about ${MEET_GOAL} times. Consider promoting them to friend.`); }
   else fallback();
 }
 function icsText(e) {
@@ -1908,32 +1886,24 @@ const App = {
     if (kind === 'see') {
       const pend = state.events.find(e => !e.done && e.personIds.includes(pid) && e.date < t);
       if (pend) list.push(item(`App.confirmEvent('${pend.id}')`, `${esc(pend.title)} happened`, eventWhen(pend)));
-      list.push(item(`App.timeSheet('${pid}')`, 'Log time together', 'Pick how long'));
+      list.push(item(`App.logMeet('${pid}')`, 'Saw them'));
       const up = s.upcoming[0];
       list.push(up ? item(`App.eventForm('${up.id}')`, 'View plan', `${esc(up.title)} · ${eventWhen(up)}`) : item(`App.eventForm(null,{personIds:['${pid}']})`, 'Plan something', 'Put it on the calendar'));
       list.push(item(`App.skip('${pid}','hang')`, 'Skip this week'));
     } else {
       list.push(item(`App.quickLog('${pid}','text')`, 'Texted'), item(`App.quickLog('${pid}','call')`, 'Called'),
-        item(`App.timeSheet('${pid}')`, p.remote ? 'Visited in person' : 'Saw them in person', 'Pick how long'),
+        item(`App.logMeet('${pid}')`, p.remote ? 'Visited in person' : 'Saw them in person'),
         item(`App.quickLog('${pid}','text',false,'them')`, 'They reached out'), item(`App.skip('${pid}','text')`, 'Skip this week'));
     }
     list.push(item(`App.detail('${pid}')`, 'Open profile'));
     openModal(`<h2>${esc(p.name)}</h2><p class="sub">${esc([levelInfo(p).label, s.lastAny ? `last talked ${ago(since(s.lastAny))}` : ''].filter(Boolean).join(' · '))}</p><div class="sheet-list">${list.join('')}</div>`);
   },
-  timeSheet(pid, back, fromDetail) {
-    const p = person(pid), off = back || 0;
-    openModal(`<h2>Time with ${esc(p.name)}</h2>
-      <div class="seg-tabs" style="margin-top:14px">${['Today', 'Yesterday'].map((l, i) => `<button class="${off === i ? 'on' : ''}" onclick="App.timeSheet('${pid}',${i},${!!fromDetail})">${l}</button>`).join('')}</div>
-      <div class="hour-chips">${[1, 2, 3, 4, 6].map(h => `<button class="hchip" onclick="App.logTime('${pid}',${h},${off},${!!fromDetail})">${h}h</button>`).join('')}</div>
-      <p class="muted small" style="margin:12px 0 0">Tap how long you were together.</p>
-      <div class="foot"><button class="btn btn-quiet left" onclick="App.logForm('${pid}','hangout')">More options</button><button class="btn btn-quiet" onclick="${fromDetail ? `App.detail('${pid}')` : 'App.close()'}">Cancel</button></div>`);
-  },
-  logTime(pid, hours, back, fromDetail) {
-    const p = person(pid), before = stats(p).hours;
-    const l = addLog(pid, 'hangout', addDays(today(), -(back || 0)), hours, '');
+  logMeet(pid, fromDetail) {
+    const p = person(pid), before = stats(p).meets;
+    const l = addLog(pid, 'hangout', today(), 0, '');
     save(); closeModal(); render();
     if (fromDetail) App.detail(pid);
-    milestoneToast(p, before, () => toast(`Logged ${hours}h with ${esc(p.name)}`, () => { App.undoLog(l.id); if (fromDetail) App.detail(pid); }));
+    milestoneToast(p, before, () => toast(`Logged time with ${esc(p.name)}`, () => { App.undoLog(l.id); if (fromDetail) App.detail(pid); }));
   },
   levelHint(k) { const el = $(`#${k === 'friend' ? 'f-tier' : 'f-interest'}-hint`); if (el) el.textContent = LEVELS[k][pickedLevel(k)].hint; },
   addSheet() {
@@ -2037,20 +2007,15 @@ const App = {
   logForm(pid, type) {
     if (!pid && !activePeople().length) { App.personForm(); return; }
     comboReset('single', pid ? [pid] : []);
-    openModal(logFormHtml(pid, type)); App.typeToggle();
-  },
-  typeToggle() {
-    const t = document.querySelector('input[name=l-type]:checked')?.value;
-    $('#l-hours-wrap').style.display = t === 'hangout' ? '' : 'none';
+    openModal(logFormHtml(pid, type));
   },
   saveLog() {
     const pid = combo.ids[0];
     if (!pid || !person(pid)) { $('#combo-box').classList.add('invalid'); $('#combo-input').focus(); return; }
     const type = document.querySelector('input[name=l-type]:checked').value;
     const by = $('#l-them').checked ? 'them' : 'me';
-    const p = person(pid), before = stats(p).hours;
-    const hours = +(document.querySelector('input[name=l-hours]:checked')?.value || 2);
-    const l = addLog(pid, type, $('#l-date').value || today(), hours, $('#l-note').value, null, by);
+    const p = person(pid), before = stats(p).meets;
+    const l = addLog(pid, type, $('#l-date').value || today(), 0, $('#l-note').value, null, by);
     const fu = $('#l-fu').value.trim();
     if (fu) p.followUps.push({ id: uid(), text: fu, date: $('#l-fu-date').value || null, done: false, created: today() });
     save(); closeModal(); render();
@@ -2149,7 +2114,7 @@ const App = {
     let title = $('#e-title').value.trim();
     if (!title) title = personIds.length ? `Time with ${listNames(names(personIds))}` : 'Social activity';
     const repeat = $('#e-repeat').value;
-    const data = { title, date, time: $('#e-time').value || '', hours: Math.max(0, +$('#e-hours').value || 0), personIds, location: $('#e-location').value.trim(), note: $('#e-note').value.trim(), done: date <= today() && $('#e-done').checked };
+    const data = { title, date, time: $('#e-time').value || '', hours: (id && getEvent(id)?.hours) || 2, personIds, location: $('#e-location').value.trim(), note: $('#e-note').value.trim(), done: date <= today() && $('#e-done').checked };
     let e;
     const startSeries = ev => { const sid = uid(); ev.seriesId = sid; state.series[sid] = { repeat, lastGen: ev.date, day: parseD(ev.date).getDate(), tpl: tplOf(ev) }; };
     const dropFuture = ev => { state.events = state.events.filter(o => !(o.seriesId === ev.seriesId && o.id !== ev.id && !o.done && o.date > ev.date)); };
