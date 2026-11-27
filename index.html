@@ -545,7 +545,7 @@ body:not([data-view=week]):not([data-view=calendar]):not([data-view=people]) .fa
    Internally, in-person interactions use the type key 'hangout'. */
 
 const KEY = 'orbit.v1';
-const APP_VERSION = '15';   // keep in step with VERSION in sw.js
+const APP_VERSION = '16';   // keep in step with VERSION in sw.js
 
 // Default cadences in days. Based on Dunbar's layers and friendship decay research,
 // tuned for early/mid-20s. Editable in Settings and per person.
@@ -1914,6 +1914,7 @@ const App = {
       list.push(item(`App.skip('${pid}','hang')`, 'Skip this week'));
     } else {
       list.push(item(`App.quickLog('${pid}','text')`, 'Texted'), item(`App.quickLog('${pid}','call')`, 'Called'),
+        item(`App.timeSheet('${pid}')`, p.remote ? 'Visited in person' : 'Saw them in person', 'Pick how long'),
         item(`App.quickLog('${pid}','text',false,'them')`, 'They reached out'), item(`App.skip('${pid}','text')`, 'Skip this week'));
     }
     list.push(item(`App.detail('${pid}')`, 'Open profile'));
