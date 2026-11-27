@@ -545,7 +545,7 @@ body:not([data-view=week]):not([data-view=calendar]):not([data-view=people]) .fa
    Internally, in-person interactions use the type key 'hangout'. */
 
 const KEY = 'orbit.v1';
-const APP_VERSION = '11';   // keep in step with VERSION in sw.js
+const APP_VERSION = '12';   // keep in step with VERSION in sw.js
 
 // Default cadences in days. Based on Dunbar's layers and friendship decay research,
 // tuned for early/mid-20s. Editable in Settings and per person.
@@ -568,7 +568,6 @@ const MAX_RATIO = 3;   // stops one long-neglected person from outranking everyo
 const MILESTONES = [ {h:50, label:'Casual friend'}, {h:90, label:'Friend'}, {h:200, label:'Close friend'} ];
 const TYPE_LABEL = { text: 'Text', call: 'Call', hangout: 'In person' };
 const REPEAT_LABEL = { '': 'Does not repeat', weekly: 'Every week', biweekly: 'Every 2 weeks', monthly: 'Every month' };
-const APPROX = [['', 'Not sure'], ['3', 'This week'], ['14', 'A couple of weeks ago'], ['30', 'About a month ago'], ['75', '2 to 3 months ago'], ['180', 'About 6 months ago'], ['365', 'A year or more']];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 /* utils */
@@ -1314,7 +1313,6 @@ document.addEventListener('keydown', e => {
   if (r && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); r.click(); }
 });
 
-const approxSelect = id => `<select id="${id}">${APPROX.map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>`;
 const SHORT_LEVEL = { friend: { 1: 'Inner circle', 2: 'Close', 3: 'Good', 4: 'Casual' }, acq: { 1: 'High', 2: 'Medium', 3: 'Low' } };
 function levelPills(k, sel) {
   const name = k === 'friend' ? 'f-tier' : 'f-interest';
@@ -1340,12 +1338,8 @@ function personFormHtml(p, kindDefault) {
   <div class="field"><label>Name</label><input id="f-name" value="${esc(p.name || '')}" autofocus></div>
   ${kindFields(p)}
   <label class="check"><input type="checkbox" id="f-remote" ${p.remote ? 'checked' : ''}><span>Long distance<small>Check-ins only, no meet-up suggestions.</small></span></label>
-  ${isNew ? `<div class="two">
-    <div class="field"><label>Last talked</label>${approxSelect('f-seedText')}</div>
-    <div class="field"><label>Last saw them</label>${approxSelect('f-seedHang')}</div>
-  </div>` : ''}
-  <details class="more" ${isNew ? '' : 'open'}><summary>More details</summary>
   <div class="field"><label>Groups</label>${gtagHtml()}</div>
+  <details class="more" ${isNew ? '' : 'open'}><summary>More details</summary>
   <div class="two">
     <div class="field"><label>Birthday</label><div class="bday-fields">
       <select id="f-bmonth"><option value="">Month</option>${MONTHS.map((m, i) => `<option value="${pad(i + 1)}" ${bm === pad(i + 1) ? 'selected' : ''}>${m}</option>`).join('')}</select>
@@ -1373,10 +1367,6 @@ function bulkFormHtml() {
   ${kindFields({ kind: 'friend', tier: 3, interest: 1 })}
   <label class="check"><input type="checkbox" id="b-remote"><span>Long distance<small>Check-ins only.</small></span></label>
   <div class="field"><label>Groups</label>${gtagHtml()}<span class="hint">Optional. Everyone above joins these groups.</span></div>
-  <div class="two">
-    <div class="field"><label>Last talked</label>${approxSelect('f-seedText')}</div>
-    <div class="field"><label>Last saw them</label>${approxSelect('f-seedHang')}</div>
-  </div>
   <div class="foot">
     <button class="btn btn-quiet" onclick="App.close()">Cancel</button>
     <button class="btn btn-primary" onclick="App.saveBulk()">Add people</button>
@@ -1633,7 +1623,6 @@ function syncEventLogs(e) {
   state.logs = state.logs.filter(l => l.eventId !== e.id);
   if (e.done) for (const pid of e.personIds) if (person(pid)) addLog(pid, 'hangout', e.date, e.hours, e.title, e.id);
 }
-const seedFrom = v => v ? addDays(today(), -+v) : null;
 function newPerson(data) {
   return { id: uid(), created: today(), skip: {}, archived: false, promotedAt: null, groups: [], followUps: [], seed: {}, ...data };
 }
@@ -1797,7 +1786,7 @@ const App = {
       if (kind === 'acq') p.promotedAt = null;
       Object.assign(p, data);
     } else {
-      state.people.push(newPerson({ ...data, seed: { text: seedFrom($('#f-seedText').value), hang: seedFrom($('#f-seedHang').value) } }));
+      state.people.push(newPerson(data));
     }
     save(); closeModal(); render();
     toast(id ? `Saved ${esc(name)}` : `Added ${esc(name)}`);
@@ -1811,8 +1800,7 @@ const App = {
       kind, tier: pickedLevel('friend'), interest: pickedLevel('acq'), remote: $('#b-remote').checked, location: '',
       groups: gtagValue(), metAt: '', metDate: null, interests: '', notes: '', textEvery: null, hangEvery: null, birthday: null,
     };
-    const seed = { text: seedFrom($('#f-seedText').value), hang: seedFrom($('#f-seedHang').value) };
-    const added = list.map(name => newPerson({ ...base, name, seed: { ...seed }, groups: [...base.groups] }));
+    const added = list.map(name => newPerson({ ...base, name, groups: [...base.groups] }));
     state.people.push(...added);
     save(); closeModal(); render();
     toast(`Added ${people(added.length)}`, () => { const ids = new Set(added.map(p => p.id)); state.people = state.people.filter(p => !ids.has(p.id)); save(); render(); });
