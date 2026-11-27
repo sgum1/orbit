@@ -545,7 +545,7 @@ body:not([data-view=week]):not([data-view=calendar]):not([data-view=people]) .fa
    Internally, in-person interactions use the type key 'hangout'. */
 
 const KEY = 'orbit.v1';
-const APP_VERSION = '9';   // keep in step with VERSION in sw.js
+const APP_VERSION = '10';   // keep in step with VERSION in sw.js
 
 // Default cadences in days. Based on Dunbar's layers and friendship decay research,
 // tuned for early/mid-20s. Editable in Settings and per person.
@@ -693,6 +693,9 @@ let histAll = false;
 let groupSugs = [];
 
 const person = id => state.people.find(p => p.id === id);
+// sample people are flagged; older copies are recognised by the "(sample)" name suffix
+const isSample = p => !!p.sample || / \(sample\)$/.test(p.name || '');
+const hasSample = () => state.people.some(isSample);
 const getEvent = id => state.events.find(e => e.id === id);
 const activePeople = () => state.people.filter(p => !p.archived);
 const lvl = p => p.kind === 'friend' ? p.tier : p.interest;
@@ -966,6 +969,8 @@ function renderWeek() {
       <button class="btn btn-sm btn-quiet" onclick="App.cancelEvent('${e.id}')">No</button></div>`);
   const ins = installBanner();
   if (ins) rows.unshift(ins);
+  if (hasSample()) rows.unshift(`<div class="banner-row"><div class="grow"><b>You're viewing sample data.</b> <span class="muted">Remove it to start with your own people.</span></div>
+      <button class="btn btn-sm btn-primary" onclick="App.removeSample()">Remove sample data</button></div>`);
   if (rows.length) h += `<div class="banner">${rows.join('')}</div>`;
 
   // don't forget: birthdays and dated follow-ups
@@ -1292,7 +1297,7 @@ function renderSettings() {
   <div class="actions">
     <button class="btn btn-primary btn-sm" onclick="App.exportData()">Export backup</button>
     <label class="btn btn-sm">Import backup<input type="file" accept="application/json,.json" style="display:none" onchange="App.importData(this.files[0])"></label>
-    <button class="btn btn-sm" onclick="App.loadSample()">Load sample data</button>
+    ${hasSample() ? `<button class="btn btn-sm" onclick="App.removeSample()">Remove sample data</button>` : `<button class="btn btn-sm" onclick="App.loadSample()">Load sample data</button>`}
     <button class="btn btn-quiet btn-sm btn-danger" onclick="App.wipe()">Erase everything</button>
   </div>`;
 }
@@ -2040,12 +2045,30 @@ const App = {
     r.readAsText(file);
   },
   wipe() { if (confirm('Erase all people, plans and history? Export a backup first if you might want it.')) { state = freshState(); save(); render(); } },
+  removeSample() {
+    const ids = new Set(state.people.filter(isSample).map(p => p.id));
+    if (!ids.size) return;
+    const onlySample = list => list.length > 0 && list.every(id => ids.has(id));
+    const goneEvents = new Set(state.events.filter(e => e.sample || onlySample(e.personIds)).map(e => e.id));
+    state.people = state.people.filter(p => !ids.has(p.id));
+    state.logs = state.logs.filter(l => !ids.has(l.personId) && !goneEvents.has(l.eventId));
+    state.events = state.events.filter(e => !goneEvents.has(e.id));
+    for (const e of state.events) e.personIds = e.personIds.filter(id => !ids.has(id));
+    for (const [sid, sr] of Object.entries(state.series)) {
+      if (onlySample(sr.tpl.personIds)) delete state.series[sid];
+      else sr.tpl.personIds = sr.tpl.personIds.filter(id => !ids.has(id));
+    }
+    for (const id of ids) delete state.settings.tierDismiss[id];
+    pf = { q: '', kind: 'all', sort: 'urgency', group: '' };
+    save(); closeModal(); render();
+    toast(state.people.length ? 'Sample data removed. Your own people are untouched.' : 'Sample data removed. Add your first person with the + button.');
+  },
   loadSample() {
     if (state.people.length && !confirm('Add sample people alongside your existing data?')) return;
     const t = today(), d = n => addDays(t, -n);
     const ids = {};
     const mk = (key, name, kind, lv, extra, logs) => {
-      const p = newPerson({ name, kind, tier: kind === 'friend' ? lv : 3, interest: kind === 'acq' ? lv : 1, created: d(120), metAt: '', metDate: null, interests: '', notes: '', textEvery: null, hangEvery: null, birthday: null, ...extra });
+      const p = newPerson({ sample: true, name, kind, tier: kind === 'friend' ? lv : 3, interest: kind === 'acq' ? lv : 1, created: d(120), metAt: '', metDate: null, interests: '', notes: '', textEvery: null, hangEvery: null, birthday: null, ...extra });
       state.people.push(p); ids[key] = p.id;
       for (const [type, n, hours, note, by] of logs) state.logs.push({ id: uid(), personId: p.id, type, date: d(n), hours: hours || 0, note: note || '', by: by || 'me', ts: Date.now() - n });
       return p;
@@ -2060,11 +2083,11 @@ const App = {
     mk('sam', 'Sam (sample)', 'acq', 1, { metAt: 'Climbing gym', metDate: d(35), interests: 'bouldering, indie music', groups: ['Climbing'] }, [['hangout', 35, 1.5, 'Wants to try the outdoor spot'], ['text', 30], ['hangout', 21, 3], ['hangout', 13, 2.5], ['text', 9, 0, '', 'them']]);
     mk('riley', 'Riley (sample)', 'acq', 2, { metAt: `Priya's birthday`, metDate: d(25), interests: 'board games' }, [['hangout', 25, 3, 'Mentioned a game night']]);
     mk('chris', 'Chris (sample)', 'friend', 3, { metAt: 'Work', promotedAt: d(10) }, [['hangout', 80, 10], ['hangout', 60, 15], ['hangout', 40, 12], ['hangout', 25, 8], ['hangout', 11, 6], ['text', 3]]);
-    const climb = { id: uid(), title: 'Climbing', date: addDays(t, 2), time: '18:30', hours: 2, personIds: [ids.sam], location: 'Bouldering gym', note: '', done: false };
+    const climb = { id: uid(), sample: true, title: 'Climbing', date: addDays(t, 2), time: '18:30', hours: 2, personIds: [ids.sam], location: 'Bouldering gym', note: '', done: false };
     const sid = uid(); climb.seriesId = sid;
     state.series[sid] = { repeat: 'weekly', lastGen: climb.date, day: parseD(climb.date).getDate(), tpl: tplOf(climb) };
     state.events.push(climb);
-    state.events.push({ id: uid(), title: 'Game night', date: addDays(t, 4), time: '19:00', hours: 3, personIds: [ids.riley, ids.priya], location: '', note: '', done: false });
+    state.events.push({ id: uid(), sample: true, title: 'Game night', date: addDays(t, 4), time: '19:00', hours: 3, personIds: [ids.riley, ids.priya], location: '', note: '', done: false });
     save(); render(); toast('Sample data loaded');
   },
 };
