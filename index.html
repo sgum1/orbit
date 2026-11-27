@@ -545,7 +545,7 @@ body:not([data-view=week]):not([data-view=calendar]):not([data-view=people]) .fa
    Internally, in-person interactions use the type key 'hangout'. */
 
 const KEY = 'orbit.v1';
-const APP_VERSION = '14';   // keep in step with VERSION in sw.js
+const APP_VERSION = '15';   // keep in step with VERSION in sw.js
 
 // Default cadences in days. Based on Dunbar's layers and friendship decay research,
 // tuned for early/mid-20s. Editable in Settings and per person.
@@ -689,7 +689,15 @@ function save() { localStorage.setItem(KEY, JSON.stringify(state)); Sync.schedul
    plan is mirrored as its own Firestore document under users/{uid}/, so edits from different devices merge
    record by record. A "shadow" of what was last synced tells a new record apart from one deleted elsewhere.
    Sample data never syncs. */
-const FIREBASE_CONFIG = null;   // paste your Firebase web app config object here, e.g. { apiKey: '...', ... }
+// Firebase web config. Not a secret: it identifies the project. Access is protected by sign-in and the Firestore rules.
+const FIREBASE_CONFIG = {
+  apiKey: 'AIzaSyBic8jPwH8G1magyAnOUzaV8q8YKTR-RSk',
+  authDomain: 'orbit-22690.firebaseapp.com',
+  projectId: 'orbit-22690',
+  storageBucket: 'orbit-22690.firebasestorage.app',
+  messagingSenderId: '152897845704',
+  appId: '1:152897845704:web:0b87f67298e46bddd828fd',
+};
 const FB_VERSION = '10.12.2';
 const SYNC_COLLS = ['people', 'logs', 'events', 'series', 'meta'];
 const LOCAL_ONLY_SETTINGS = ['lastBackup', 'backupSnooze', 'installDismissed'];
