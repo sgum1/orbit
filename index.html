@@ -542,7 +542,7 @@ body:not([data-view=week]):not([data-view=calendar]):not([data-view=people]) .fa
    Internally, in-person interactions use the type key 'hangout'. */
 
 const KEY = 'orbit.v1';
-const APP_VERSION = '18';   // keep in step with VERSION in sw.js
+const APP_VERSION = '19';   // keep in step with VERSION in sw.js
 
 // Default cadences in days. Based on Dunbar's layers and friendship decay research,
 // tuned for early/mid-20s. Editable in Settings and per person.
@@ -885,12 +885,25 @@ const Sync = {
 };
 
 let state = load();
+(function renameGroupsOnce() {
+  const flag = 'orbit.migr.groups1';
+  if (localStorage.getItem(flag)) return;
+  const map = { roommates: 'Roomies', asians: 'SouthBay' };
+  let changed = false;
+  for (const p of state.people) {
+    const next = [...new Set((p.groups || []).map(g => map[g.toLowerCase()] || g))];
+    if (JSON.stringify(next) !== JSON.stringify(p.groups || [])) { p.groups = next; changed = true; }
+  }
+  localStorage.setItem(flag, '1');
+  if (changed) localStorage.setItem(KEY, JSON.stringify(state));
+})();
 let view = 'week';
 let pf = { q: '', kind: 'all', sort: 'urgency', group: '' };
 let showAll = false;
 let calWeek = weekStart(today());
 let histAll = false;
 let groupSugs = [];
+let groupEditing = '';
 
 const person = id => state.people.find(p => p.id === id);
 // sample people are flagged; older copies are recognised by the "(sample)" name suffix
@@ -1295,6 +1308,7 @@ function renderPeople() {
     <input class="search" id="q" placeholder="Search" value="${esc(pf.q)}" oninput="App.search(this.value)">
     <div class="seg-tabs">${tab('all', 'All')}${tab('friend', 'Friends')}${tab('acq', 'Acquaintances')}${nL ? tab('remote', 'Long distance') : ''}${nX ? tab('archived', 'Archived') : ''}</div>
     ${groups.length ? `<select class="inline" onchange="App.pf('group',this.value)"><option value="">All groups</option>${groups.map(g => `<option value="${esc(g)}" ${pf.group === g ? 'selected' : ''}>${esc(g)}</option>`).join('')}</select>` : ''}
+    ${state.people.length ? `<button class="btn" onclick="App.groupsSheet()">Edit groups</button>` : ''}
   </div>`;
   if (!state.people.length) return h + emptyState();
   if (!ppl.length) return h + `<p class="muted" style="margin-top:32px">No one matches.</p>`;
@@ -1784,7 +1798,7 @@ function detailHtml(p) {
       ${b.n >= 4 ? `<div><small>Who reaches out</small>You ${b.me} · them ${b.them}</div>` : ''}
     </div>
     ${prog}
-    ${(p.groups || []).length ? `<div class="notes-block"><span class="label">Groups</span>${esc(p.groups.join(', '))}</div>` : ''}
+    ${(p.groups || []).length ? `<div class="notes-block"><span class="label">Groups</span><div class="group-tags" style="margin-top:4px">${p.groups.map(g => `<button class="tag tag-group" style="border:0;cursor:pointer" onclick="App.groupSheet(allGroups().indexOf(${esc(JSON.stringify(g))}))">${esc(g)}</button>`).join('')}</div></div>` : ''}
     ${p.interests ? `<div class="notes-block"><span class="label">Interests</span>${esc(p.interests)}</div>` : ''}
     ${p.notes ? `<div class="notes-block"><span class="label">Notes</span>${esc(p.notes)}</div>` : ''}
     <div class="actions" style="margin-top:22px">
@@ -2065,6 +2079,51 @@ const App = {
     const e = id ? JSON.parse(JSON.stringify(getEvent(id))) : { title: preset.title || '', date: preset.date || today(), time: '', hours: 2, personIds: preset.personIds || [], location: '', note: '', done: false };
     comboReset('multi', e.personIds);
     openModal(eventFormHtml(e));
+  },
+  groupsSheet() {
+    const counts = {};
+    for (const p of state.people) for (const g of p.groups || []) counts[g] = (counts[g] || 0) + 1;
+    const gs = allGroups();
+    openModal(`<h2>Groups</h2><p class="sub">Tap a group to rename it or change who's in it.</p>
+      <div class="sheet-list">${gs.map((g, i) => `<button onclick="App.groupSheet(${i})"><b>${esc(g)}</b><span>${people(counts[g] || 0)}</span></button>`).join('')}
+      <button onclick="App.groupSheet(-1)"><b>+ New group</b></button></div>`);
+  },
+  // i = index into allGroups(); -1 for a new group
+  groupSheet(i) {
+    const name = i >= 0 ? allGroups()[i] : '';
+    groupEditing = name;
+    comboReset('multi', name ? state.people.filter(p => (p.groups || []).includes(name)).map(p => p.id) : []);
+    openModal(`<h2>${name ? 'Edit group' : 'New group'}</h2>
+      <div class="field"><label>Name</label><input id="g-name" value="${esc(name)}" placeholder="e.g. Roomies" ${name ? '' : 'autofocus'}></div>
+      <div class="field"><label>People</label>${comboHtml(false)}</div>
+      <div class="foot">
+        ${name ? `<button class="btn btn-quiet btn-danger left" onclick="App.deleteGroup()">Delete group</button>` : ''}
+        <button class="btn btn-quiet" onclick="App.groupsSheet()">Back</button>
+        <button class="btn btn-primary" onclick="App.saveGroup()">Save</button>
+      </div>`);
+  },
+  saveGroup() {
+    const old = groupEditing, typed = $('#g-name').value.trim().replace(/\s+/g, ' ');
+    if (!typed) { $('#g-name').focus(); $('#g-name').style.borderColor = 'var(--overdue)'; return; }
+    // renaming onto another existing group merges them; a case-only change keeps what you typed
+    const name = old && typed.toLowerCase() === old.toLowerCase() ? typed : canonGroup(typed);
+    const members = new Set(combo.ids);
+    for (const p of state.people) {
+      let g = (p.groups || []).filter(x => x !== old);
+      if (members.has(p.id) && !g.some(x => x.toLowerCase() === name.toLowerCase())) g.push(name);
+      p.groups = g;
+    }
+    if (pf.group === old) pf.group = name;
+    save(); render(); App.groupsSheet();
+    toast(old && old !== name ? `Renamed ${esc(old)} to ${esc(name)}` : `Saved ${esc(name)}`);
+  },
+  deleteGroup() {
+    const old = groupEditing;
+    if (!confirm(`Delete the group "${old}"? The people stay, they just won't be in this group.`)) return;
+    for (const p of state.people) p.groups = (p.groups || []).filter(x => x !== old);
+    if (pf.group === old) pf.group = '';
+    save(); render(); App.groupsSheet();
+    toast(`Deleted ${esc(old)}`);
   },
   planGroup(i) { const [g, ids] = groupSugs[i] || []; if (g) App.eventForm(null, { personIds: ids, title: g }); },
   pickGroup(i) {
