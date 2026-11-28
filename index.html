@@ -538,7 +538,7 @@ body:not([data-view=week]):not([data-view=calendar]):not([data-view=people]) .fa
    Internally, in-person interactions use the type key 'hangout'. */
 
 const KEY = 'orbit.v1';
-const APP_VERSION = '21';   // keep in step with VERSION in sw.js
+const APP_VERSION = '22';   // keep in step with VERSION in sw.js
 
 // Default cadences in days. Based on Dunbar's layers and friendship decay research,
 // tuned for early/mid-20s. Editable in Settings and per person.
@@ -1181,6 +1181,35 @@ function emptyState() {
 /* this week */
 const CHECK_SVG = '<svg viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7"/></svg>';
 // one short line worth knowing: an undated follow-up (dated ones and birthdays already sit under Don't forget)
+function weekIndex() {
+  const ws = weekStart(today()), plan = weekPlan(ws), next = weekPlan(addDays(ws, 7)), m = new Map();
+  for (const it of plan.see) m.set(it.p.id, { kind: 'see', it });
+  for (const it of plan.text) { const cur = m.get(it.p.id); if (!cur || (cur.it.done && !it.done)) m.set(it.p.id, { kind: 'text', it }); }
+  return { plan, m, nextIds: new Set([...next.see, ...next.text].map(x => x.p.id)) };
+}
+function weekStatusFor(p, W, s) {
+  const e = W.m.get(p.id), t = today(), we = W.plan.we;
+  const dotOf = html => { const k = (html.match(/s-(\w+)/) || [])[1] || 'soon'; return k === 'plan' ? 'soon' : k; };
+  if (p.archived) return { label: '', html: '<span class="muted">Archived</span>', dot: 'soon', rank: 4 };
+  if (e) {
+    const { kind, it } = e, label = kind === 'see' ? 'See' : 'Check in';
+    let html;
+    if (it.done) html = status('good', 'Done');
+    else if (kind === 'see' && it.planned && it.planned.date < t) html = status('due', 'Did it happen?');
+    else if (kind === 'see' && it.planned) html = status('plan', `Planned ${it.planned.date > we ? relDay(it.planned.date) : wd(it.planned.date)}`);
+    else if (kind === 'text' && it.times > 1) html = status(it.count ? 'soon' : 'due', `${it.count} of ${it.times}`);
+    else if (it.pinned && it.due > we) html = status('plan', 'This week');
+    else html = dueStatus(it.due);
+    return { label, html, dot: it.done ? 'good' : dotOf(html), rank: it.done ? 3 : 0, due: it.due };
+  }
+  if (!p.remote && s.upcoming[0]) return { label: 'See', html: status('plan', `Planned ${relDay(s.upcoming[0].date)}`), dot: 'soon', rank: 1 };
+  if (W.nextIds.has(p.id)) return { label: 'Up next', html: '<span class="muted">Next week</span>', dot: 'soon', rank: 1 };
+  if ((s.tSkipped && s.textRem <= 0) || (!p.remote && s.hSkipped && s.hangRem <= 0)) return { label: 'This week', html: '<span class="muted">Skipped</span>', dot: 'soon', rank: 2 };
+  const opts = [['Check in', s.textRem]]; if (!p.remote) opts.push(['See', s.hangRem]);
+  const [label, rem] = opts.sort((a, b) => a[1] - b[1])[0];
+  if (rem > 0) return { label, html: `<span class="muted">In ${rem}d</span>`, dot: 'good', rank: 2, rem };
+  return { label, html: '<span class="muted">Not this week</span>', dot: 'soon', rank: 1 };
+}
 function todoNote(p) {
   const f = openFollowUps(p).find(f => !f.date);
   return f ? `Follow up: ${esc(f.text)}` : '';
@@ -1325,8 +1354,10 @@ function renderPeople() {
   if (pf.group) ppl = ppl.filter(p => (p.groups || []).includes(pf.group));
   if (pf.q) { const q = pf.q.toLowerCase(); ppl = ppl.filter(p => [p.name, p.interests, p.metAt, p.notes, (p.groups || []).join(' ')].join(' ').toLowerCase().includes(q)); }
   const S = new Map(ppl.map(p => [p.id, stats(p)]));
+  const W = weekIndex(), WS = new Map(ppl.map(p => [p.id, weekStatusFor(p, W, S.get(p.id))]));
   const urg = p => { const s = S.get(p.id); return Math.max(s.tSkipped ? 0 : s.tScore, s.hSkipped ? 0 : s.hScore); };
-  if (pf.sort === 'urgency') ppl.sort((a, b) => urg(b) - urg(a));
+  // this week's open items first (soonest due), then planned/next week, then later, then done
+  if (pf.sort === 'urgency') ppl.sort((a, b) => WS.get(a.id).rank - WS.get(b.id).rank || (WS.get(a.id).due || '').localeCompare(WS.get(b.id).due || '') || urg(b) - urg(a));
   else if (pf.sort === 'name') ppl.sort((a, b) => a.name.localeCompare(b.name));
   else if (pf.sort === 'level') ppl.sort((a, b) => (a.kind === b.kind ? lvl(a) - lvl(b) : a.kind === 'friend' ? -1 : 1) || a.name.localeCompare(b.name));
   else if (pf.sort === 'recent') ppl.sort((a, b) => (S.get(a.id).lastAny ? S.get(a.id).tDays : 1e9) - (S.get(b.id).lastAny ? S.get(b.id).tDays : 1e9));
@@ -1353,14 +1384,9 @@ function renderPeople() {
     const s = S.get(p.id);
     const prog = p.kind === 'acq' ? `<div class="bar" style="margin-top:9px;max-width:200px" title="Seen ${plural(s.meets, 'time')} of about ${MEET_GOAL}"><span style="width:${Math.min(100, s.meets / MEET_GOAL * 100)}%"></span></div>` : '';
     // one status: whichever is more pressing
-    // a planned meetup counts as handled, so an overdue check-in can still be the more pressing thing
-    let label, st;
-    const hEff = p.remote || s.hSkipped ? -1 : s.upcoming[0] ? Math.min(s.hRatio, 0.8) : s.hRatio;
-    const tEff = s.tSkipped ? -1 : s.tRatio;
-    if (!p.remote && hEff >= tEff) { label = 'See'; st = s.upcoming[0] ? status('plan', `Planned ${relDay(s.upcoming[0].date)}`) : s.hSkipped ? '<span class="muted">Skipped</span>' : status(statusOf(s.hRatio), dueIn(s.hangRem)); }
-    else { label = 'Check in'; st = s.tSkipped ? '<span class="muted">Skipped</span>' : status(statusOf(s.tRatio), dueIn(s.textRem)); }
+    const w = WS.get(p.id), label = w.label, st = w.html;
     h += `<div class="row simple" ${RB} onclick="App.detail('${p.id}')">
-      <span class="dot s-${s.status}" title="${STATUS_LABEL[s.status]}"></span>
+      <span class="dot s-${w.dot}"></span>
       <div class="row-main"><div class="name">${esc(p.name)}</div>${meta(p, [s.lastAny ? `last contact ${ago(since(s.lastAny))}` : ''])}${groupTags(p)}${prog}</div>
       <div class="cell right"><span class="cell-label">${label}</span>${st}</div>
     </div>`;
@@ -1869,7 +1895,7 @@ function detailHtml(p) {
   const logs = histAll ? s.logs : s.logs.slice(0, 6);
   return `<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
       <div><h2>${esc(p.name)}</h2>${meta(p, [met ? `met ${met}` : ''])}</div>
-      ${status(s.status, p.archived ? 'Archived' : STATUS_LABEL[s.status])}</div>
+      ${(w => `<div class="cell right">${w.label ? `<span class="cell-label">${w.label}</span>` : ''}${w.html}</div>`)(weekStatusFor(p, weekIndex(), s))}</div>
     <div class="facts">
       <div><small>Last contact</small>${s.lastAny ? ago(since(s.lastAny)) : 'None logged'}</div>
       <div><small>Last seen in person</small>${s.lastHang ? ago(since(s.lastHang)) : 'None logged'}</div>
